@@ -1,0 +1,4 @@
+title = "R-DLC full-history secret scanning"
+
+[extend]
+useDefault = true

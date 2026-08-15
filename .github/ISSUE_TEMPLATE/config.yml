@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/aithinkers/requirements-dlc/blob/main/SECURITY.md
+    about: Establish a protected reporting channel; never put sensitive details in an issue.
+  - name: Confidential conduct report
+    url: https://github.com/aithinkers/requirements-dlc/blob/main/CODE_OF_CONDUCT.md
+    about: Request a protected conduct-reporting channel without posting identifying details.

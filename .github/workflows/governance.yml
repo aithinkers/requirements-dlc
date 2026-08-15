@@ -1,0 +1,111 @@
+name: Governance
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  repository-policy:
+    name: Repository policy reporter
+    if: github.event_name == 'push' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - name: Check out trusted validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || github.event.pull_request.base.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts --prefix trusted
+      - name: Check out candidate as untrusted data
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: candidate
+          persist-credentials: false
+      - id: validate
+        name: Validate candidate with trusted base code
+        if: github.event_name == 'pull_request_target'
+        continue-on-error: true
+        env:
+          RDLC_CANDIDATE_ROOT: ${{ github.workspace }}/candidate
+          RDLC_TRUSTED_ROOT: ${{ github.workspace }}/trusted
+        run: node trusted/scripts/verify-governance.mjs
+      - name: Report repository policy on PR head
+        if: always() && github.event_name == 'pull_request_target'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RDLC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RDLC_REPOSITORY: ${{ github.repository }}
+          RDLC_VALIDATION_OUTCOME: ${{ steps.validate.outcome }}
+        run: |
+          state=failure
+          if [ "$RDLC_VALIDATION_OUTCOME" = success ]; then state=success; fi
+          gh api "repos/$RDLC_REPOSITORY/statuses/$RDLC_HEAD_SHA" -f state="$state" -f context='Repository policy' -f description='Trusted base governance validation'
+          test "$state" = success
+      - name: Validate main
+        if: github.event_name == 'push'
+        working-directory: trusted
+        run: npm test
+
+  pull-request-traceability:
+    name: Pull request traceability reporter
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      statuses: write
+    steps:
+      - name: Check out trusted validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts --prefix trusted
+      - name: Check out candidate as untrusted data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+      - id: validate
+        name: Validate traceability with trusted base code
+        continue-on-error: true
+        env:
+          RDLC_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          RDLC_CANDIDATE_ROOT: ${{ github.workspace }}/candidate
+          RDLC_PR_BODY: ${{ github.event.pull_request.body }}
+          RDLC_PR_HEAD: ${{ github.event.pull_request.head.ref }}
+          RDLC_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node trusted/scripts/verify-pr-traceability.mjs
+      - name: Report traceability on PR head
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RDLC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RDLC_REPOSITORY: ${{ github.repository }}
+          RDLC_VALIDATION_OUTCOME: ${{ steps.validate.outcome }}
+        run: |
+          state=failure
+          if [ "$RDLC_VALIDATION_OUTCOME" = success ]; then state=success; fi
+          gh api "repos/$RDLC_REPOSITORY/statuses/$RDLC_HEAD_SHA" -f state="$state" -f context='Pull request traceability' -f description='Trusted base traceability validation'
+          test "$state" = success

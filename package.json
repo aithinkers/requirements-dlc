@@ -1,0 +1,32 @@
+{
+  "name": "requirements-dlc",
+  "version": "0.0.1",
+  "private": false,
+  "description": "R-DLC development and governance tooling",
+  "license": "MIT",
+  "author": "AIThinkers",
+  "homepage": "https://github.com/aithinkers/requirements-dlc#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aithinkers/requirements-dlc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aithinkers/requirements-dlc/issues"
+  },
+  "keywords": ["requirements", "governance", "agents", "traceability", "lifecycle"],
+  "type": "module",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "check:governance": "node scripts/verify-governance.mjs",
+    "test:governance": "node --test tests/governance/*.test.mjs",
+    "test": "npm run check:governance && npm run test:governance"
+  },
+  "dependencies": {
+    "yaml": "2.9.0"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
+  }
+}
