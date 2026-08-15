@@ -98,7 +98,7 @@ dependencies of R-DLC:
 - [AWS AI-DLC session management](https://awslabs.github.io/aidlc-workflows/guide/11-session-management/)
 - [AWS AI-DLC Kiro IDE harness](https://awslabs.github.io/aidlc-workflows/guide/harnesses/kiro-ide/)
 - [gstack](https://github.com/garrytan/gstack)
-- [K-DLC specification](./knowledge-development-lifecycle-specification.md)
+- [K-DLC specification](https://github.com/aithinkers/knowledge-dlc/blob/main/docs/knowledge-development-lifecycle-specification.md)
 
 R-DLC adopts the useful concepts of adaptive stages, explicit artifacts,
 human gates, persistent workflow state, recovery, role-based review, and small
@@ -174,6 +174,10 @@ project migrating to 0.2 SHALL:
    after successful migration validation. Migration SHALL be idempotent and
    produce a report mapping every old identity, status, and approval record to
    its new representation.
+
+No conforming 0.1 project is known to exist. This migration procedure is
+retained as a conformance fixture requirement (§44.1) and is otherwise
+informative until an implementation claims a 0.1-to-0.2 migration.
 
 ## 3. Problem Statement
 
@@ -1310,6 +1314,11 @@ version, extraction profile, or normalization schema changes. A persistent
 SQLite index is out of scope for reference distribution release 0.1.
 
 #### 16.2.3 Reference extraction stack (informative)
+
+The tools named below are exemplary rather than required. The reference
+distribution realizes the same staged adapter contract and coverage-reporting
+obligations with a Node.js-based extraction stack; any stack satisfying
+§16.2.1 and §16.2.2 is acceptable.
 
 The recommended implementation uses narrow, structure-aware parsers first and
 a sandboxed broad-format fallback:
