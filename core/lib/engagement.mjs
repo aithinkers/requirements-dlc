@@ -81,17 +81,15 @@ function stateHash(state) {
 }
 
 /**
- * §34.3 — atomic checkpoint: the state file is written via temp+rename and an
- * independently comparable recovery breadcrumb records the state hash and
- * next action. A torn write leaves the previous state + breadcrumb intact.
+ * §34.3 — atomic checkpoint via temp+rename with an independently comparable
+ * recovery breadcrumb. The breadcrumb is renamed BEFORE the state file: a
+ * crash between the two renames leaves a new breadcrumb with the old state,
+ * which loadEngagement reports as an interrupted update pointing forward to
+ * the recorded next action — never a silently torn state.
  */
 export async function checkpoint(state, directory, { at }) {
   const stamped = { ...state, last_safe_checkpoint: at };
   const hash = stateHash(stamped);
-  const statePath = join(directory, "rdlc-state.yaml");
-  const temporary = join(directory, ".rdlc-state.yaml.tmp");
-  await writeFile(temporary, YAML.stringify(stamped), "utf8");
-  await rename(temporary, statePath);
   const breadcrumb = {
     schema_version: "rdlc.recovery/v0.2",
     engagement: stamped.engagement,
@@ -102,6 +100,9 @@ export async function checkpoint(state, directory, { at }) {
   const breadcrumbTemporary = join(directory, ".recovery.yaml.tmp");
   await writeFile(breadcrumbTemporary, YAML.stringify(breadcrumb), "utf8");
   await rename(breadcrumbTemporary, join(directory, "recovery.yaml"));
+  const temporary = join(directory, ".rdlc-state.yaml.tmp");
+  await writeFile(temporary, YAML.stringify(stamped), "utf8");
+  await rename(temporary, join(directory, "rdlc-state.yaml"));
   return { state: stamped, breadcrumb };
 }
 
@@ -121,7 +122,13 @@ export async function loadEngagement(directory) {
   }
   const verified = stateHash(state) === breadcrumb.state_hash && state.engagement === breadcrumb.engagement;
   if (!verified) {
-    throw new EngagementError("engagement state does not match its recovery breadcrumb; corruption or an interrupted update is suspected (§34.3)");
+    const interrupted = state.engagement === breadcrumb.engagement
+      && String(breadcrumb.checkpointed_at) > String(state.last_safe_checkpoint ?? "");
+    throw new EngagementError(
+      interrupted
+        ? `an interrupted checkpoint is suspected; the recovery breadcrumb points to next action "${breadcrumb.next_action}" (§34.3)`
+        : "engagement state does not match its recovery breadcrumb; corruption or an interrupted update is suspected (§34.3)"
+    );
   }
   return { state, breadcrumb, verified: true };
 }
@@ -167,7 +174,7 @@ export function recordApplyResults(state, changesetId, results, { actor, at }) {
     .map((entry) => entry.receipt.id);
   return {
     ...state,
-    receipts: [...state.receipts, ...receipts],
+    receipts: [...new Set([...state.receipts, ...receipts])],
     uncertain_writes: [
       ...state.uncertain_writes.filter((entry) => entry.changeset !== changesetId),
       ...uncertain

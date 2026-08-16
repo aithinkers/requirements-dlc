@@ -123,3 +123,31 @@ test("FEAT-011: the distribution covers the full §37 command set with mutation 
   assert.match(status, /GENERATED from core\/commands\/commands.json/);
   assert.match(status, /untrusted data/);
 });
+
+test("FEAT-011: receipts never duplicate on reconciliation re-reporting (review MEDIUM)", () => {
+  let state = createEngagement(base);
+  const changeset = mintIdentity();
+  const results = { "op-001": { status: "verified", receipt: { id: "r-1" } } };
+  state = recordApplyResults(state, changeset, results, { actor, at: "t" });
+  state = recordApplyResults(state, changeset, results, { actor, at: "t2" });
+  assert.deepEqual(state.receipts, ["r-1"]);
+});
+
+test("FEAT-011: a crash between breadcrumb and state renames is reported as interrupted, pointing forward (review LOW)", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "rdlc-"));
+  let state = createEngagement(base);
+  await checkpoint(state, directory, { at: "2026-08-15T23:01:00.000Z" });
+  // Simulate the crash window: newer breadcrumb written, state rename lost.
+  const next = { ...state, next_action: "apply changeset CS-1" };
+  const { canonicalBytes, sourceHash } = await import("../../core/lib/canonical.mjs");
+  const YAML = (await import("yaml")).default;
+  const stamped = { ...next, last_safe_checkpoint: "2026-08-15T23:05:00.000Z" };
+  await writeFile(join(directory, "recovery.yaml"), YAML.stringify({
+    schema_version: "rdlc.recovery/v0.2",
+    engagement: stamped.engagement,
+    state_hash: sourceHash(canonicalBytes({ state: stamped })).hash,
+    next_action: stamped.next_action,
+    checkpointed_at: "2026-08-15T23:05:00.000Z"
+  }), "utf8");
+  await assert.rejects(loadEngagement(directory), /interrupted checkpoint is suspected.*apply changeset CS-1/);
+});
