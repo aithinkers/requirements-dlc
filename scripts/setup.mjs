@@ -144,6 +144,37 @@ artifact_types:
       outcome: summary
 `;
 
+const ADO_EXAMPLE_MAPPING = `schema_version: rdlc.connector-mapping/v0.2
+version: ado-example/v1
+provider: azure-devops
+organization: your-org
+project_key: YourProject
+# NOTE: azure-devops runtime synchronization is roadmap (§45.3); this mapping
+# powers template validation and format-drift checks today.
+fields: [System.Title, System.Description, System.State, System.AreaPath, Microsoft.VSTS.Scheduling.StoryPoints, Microsoft.VSTS.Common.AcceptanceCriteria]
+
+estimation:
+  profile: team-story-points
+  provider_field: Microsoft.VSTS.Scheduling.StoryPoints
+  scheme: story-points
+  allowed_values: [1, 2, 3, 5, 8, 13]
+
+components:
+  provider_field: System.AreaPath
+  match_by: name
+
+artifact_types:
+  story:
+    issue_type: User Story
+    template_fields:
+      statement: System.Title
+      acceptance_criteria: Microsoft.VSTS.Common.AcceptanceCriteria
+  epic:
+    issue_type: Epic
+    template_fields:
+      outcome: System.Title
+`;
+
 const SCAFFOLD_DIRECTORIES = [
   "rdlc/spaces/main/policy",
   "rdlc/spaces/main/templates",
@@ -177,6 +208,7 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
   const projectId = basename(resolve(target)) || "rdlc-project";
   plan.push({ content: projectManifest(projectId), relative: "requirements-project.yaml" });
   plan.push({ content: EXAMPLE_MAPPING, relative: join("config", "connectors", "jira-example.yaml") });
+  plan.push({ content: ADO_EXAMPLE_MAPPING, relative: join("config", "connectors", "azure-devops-example.yaml") });
 
   for (const entry of plan) {
     const destination = join(target, entry.relative);

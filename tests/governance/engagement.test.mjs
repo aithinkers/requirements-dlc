@@ -116,7 +116,7 @@ test("FEAT-011: the generated Claude Code distribution passes the drift check an
 
 test("FEAT-011: the distribution covers the full §37 command set with mutation guards", async () => {
   const core = JSON.parse(await readFile("core/commands/commands.json", "utf8"));
-  assert.equal(core.commands.length, 26);
+  assert.equal(core.commands.length, 27);
   const sync = await readFile("distribution/claude-code/commands/rdlc-sync.md", "utf8");
   assert.match(sync, /present the exact connection, organization, project, items, operations, and write policy/);
   const status = await readFile("distribution/claude-code/commands/rdlc-status.md", "utf8");
@@ -241,10 +241,10 @@ test("FEAT-014: setup migrates the undiscovered 0.1.1 layout and the marketplace
 
 test("FEAT-015: codex and kiro distributions generate from the same core with intact guarantees", async () => {
   const { readdir } = await import("node:fs/promises");
-  assert.equal((await readdir("distribution/codex/.codex/prompts")).length, 26);
+  assert.equal((await readdir("distribution/codex/.codex/prompts")).length, 27);
   assert.equal((await readdir("distribution/codex/.codex/agents")).length, 20, "md + toml per role");
   for (const host of ["kiro", "kiro-ide"]) {
-    assert.equal((await readdir(`distribution/${host}/.kiro/skills`)).length, 26);
+    assert.equal((await readdir(`distribution/${host}/.kiro/skills`)).length, 27);
     assert.equal((await readdir(`distribution/${host}/.kiro/agents`)).length, 20, "md + json per role");
   }
   const codexAgent = await readFile("distribution/codex/.codex/agents/rdlc-facilitator.md", "utf8");

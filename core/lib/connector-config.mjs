@@ -27,6 +27,9 @@ export class ConnectorConfigError extends Error {
 }
 
 const WRITE_MODES = ["read-only", "propose", "approve-each-batch", "approved-automation"];
+/** azure-devops: configuration/templates/drift are supported today; the
+ * runtime write connector is §45.3 roadmap (§32). */
+const PROVIDERS = ["jira", "azure-devops", "github", "confluence-cloud"];
 
 /** Validate one mapping document (already parsed). */
 export function validateMapping(mapping, { catalogTypes = null } = {}) {
@@ -37,6 +40,12 @@ export function validateMapping(mapping, { catalogTypes = null } = {}) {
   }
   for (const field of ["version", "provider", "project_key"]) {
     if (!mapping[field]) failures.push(`mapping requires ${field}`);
+  }
+  if (mapping.provider && !PROVIDERS.includes(mapping.provider)) {
+    failures.push(`unknown provider: ${mapping.provider} (supported: ${PROVIDERS.join(", ")})`);
+  }
+  if (mapping.provider === "azure-devops" && !mapping.organization) {
+    failures.push("azure-devops mappings require the organization (§32)");
   }
   if (!Array.isArray(mapping.fields) || mapping.fields.length === 0) {
     failures.push("mapping requires a non-empty fields list (§29)");
@@ -78,8 +87,11 @@ export function validateMapping(mapping, { catalogTypes = null } = {}) {
       issueTypes.add(binding.issue_type);
     }
     for (const [templateField, providerField] of Object.entries(binding.template_fields ?? {})) {
-      const head = String(providerField).split(".")[0];
-      if (!fieldSet.has(head)) {
+      // Provider field names may themselves contain dots (ADO System.Title):
+      // the literal name wins; only otherwise is the head treated as a path root.
+      const literal = fieldSet.has(String(providerField));
+      const head = fieldSet.has(String(providerField).split(".")[0]);
+      if (!literal && !head) {
         failures.push(`artifact type "${artifactType}": template field "${templateField}" maps to "${providerField}", which is not in the mapped fields list`);
       }
     }
