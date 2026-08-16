@@ -33,9 +33,11 @@ export function createRaidRecord({ type, statement, owner, sources = [], affecte
   if (!owner) throw new RaidError("a RAID record requires an owner");
   if (!at) throw new RaidError("a RAID record requires a creation time");
   for (const field of TYPE_FIELDS[type]) {
-    if (specific[field] === undefined || specific[field] === null || specific[field] === "") {
+    const value = specific[field];
+    if (value === undefined || value === null || (typeof value === "string" && !value.trim())) {
       throw new RaidError(`a ${type} requires ${field} (§23.2)`);
     }
+    void 0;
   }
   return {
     schema_version: "rdlc.raid/v0.2",

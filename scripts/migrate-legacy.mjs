@@ -18,11 +18,14 @@ export class MigrationError extends Error {
 }
 
 /** Legacy combined statuses split WITHOUT inferring evidence (§2.4 step 3). */
+// A legacy "approved" cannot become a 0.2 approved state: no conforming §27
+// decision exists behind it (§2.4 step 4). It re-enters at reviewed with the
+// historical approval retained as evidence only.
 const STATUS_SPLIT = Object.freeze({
   "draft": { governance_state: "draft", synchronization_state: "not-synchronized", verification_progress: "not-designed", verification_outcome: "none" },
-  "approved": { governance_state: "approved", synchronization_state: "not-synchronized", verification_progress: "not-designed", verification_outcome: "none" },
-  "approved-and-synced": { governance_state: "approved", synchronization_state: "not-synchronized", verification_progress: "not-designed", verification_outcome: "none", migration_note: "legacy sync claim dropped: no read-back evidence existed (§2.4)" },
-  "tested": { governance_state: "approved", synchronization_state: "not-synchronized", verification_progress: "not-designed", verification_outcome: "none", migration_note: "legacy tested claim dropped: no execution evidence existed (§2.4)" }
+  "approved": { governance_state: "reviewed", synchronization_state: "not-synchronized", verification_progress: "not-designed", verification_outcome: "none", migration_note: "legacy approval demoted to historical evidence; a new conforming decision is required (§2.4)" },
+  "approved-and-synced": { governance_state: "reviewed", synchronization_state: "not-synchronized", verification_progress: "not-designed", verification_outcome: "none", migration_note: "legacy approval and sync claims dropped: no conforming decision or read-back evidence existed (§2.4)" },
+  "tested": { governance_state: "reviewed", synchronization_state: "not-synchronized", verification_progress: "not-designed", verification_outcome: "none", migration_note: "legacy approval and tested claims dropped: no conforming decision or execution evidence existed (§2.4)" }
 });
 
 export function migrateLegacyProject(legacy) {
@@ -91,6 +94,8 @@ export function migrateLegacyProject(legacy) {
   // Step 4: legacy approvals are historical evidence only, never 0.2 approvals.
   const historicalApprovals = (legacy.approvals ?? []).map((approval) => ({
     ...approval,
+    artifact: idMap.get(approval.artifact) ?? approval.artifact,
+    legacy_artifact_alias: approval.artifact,
     status: "historical-evidence",
     migration_note: "retained as historical evidence; not a 0.2 approval without a new conforming decision (§2.4)"
   }));

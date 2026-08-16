@@ -105,8 +105,9 @@ test("REL-001: the §46 scenario runs end to end on the implemented slices", asy
     probability: "low", impact: "medium", exposure_method: "matrix", mitigation: "read-back verification"
   });
   assert.equal(riskProposal.status, "open");
-  const waves = computeWaves(["persist", "expire"], [{ source: "expire", target: "persist" }]);
-  assert.deepEqual(waves, [["persist"], ["expire"]]);
+  const planning = computeWaves(["persist", "expire"], [{ source: "expire", target: "persist" }]);
+  assert.deepEqual(planning.waves, [["persist"], ["expire"]]);
+  assert.deepEqual(planning.external_register, []);
 
   /* 6. Two BAs overlap; claims reveal it; the lease serializes the mutation. */
   const claims = [
@@ -255,5 +256,6 @@ test("REL-001: the conformance statement claims exactly the implemented 0.1 prof
   assert.ok(statement.modules.includes("Planning"), "§45.1 requires the Planning claim in release 0.1");
   assert.equal(statement.release_candidate, true);
   assert.ok(statement.definition_of_done?.tagged_build, "the release claim names its tagged-build evidence");
-  assert.deepEqual(statement.partial_modules, {}, "no module is claimed while partial");
+  assert.ok(statement.partial_modules.Planning?.includes("outstanding depth"), "the Planning claim declares its remaining depth honestly");
+  assert.match(statement.definition_of_done.tagged_build, /pending/, "tag evidence is stated as pending, not asserted");
 });

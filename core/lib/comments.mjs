@@ -33,7 +33,7 @@ export function enqueueComment({ provider, itemId, commentId, revision, author, 
   if (!["new", "edited", "policy-change"].includes(event)) {
     throw new CommentReviewError(`unknown queue event: ${event}`);
   }
-  for (const [field, value] of Object.entries({ provider, itemId, commentId, author, relevancePolicyVersion })) {
+  for (const [field, value] of Object.entries({ provider, itemId, commentId, revision, author, relevancePolicyVersion })) {
     if (!value) throw new CommentReviewError(`a queue entry requires ${field}`);
   }
   return {
@@ -42,7 +42,7 @@ export function enqueueComment({ provider, itemId, commentId, revision, author, 
     provider,
     item_id: itemId,
     comment_id: commentId,
-    comment_revision: revision ?? null,
+    comment_revision: revision,
     author,
     body: String(body ?? ""),
     event,

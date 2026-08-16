@@ -94,8 +94,8 @@ export function advanceComponent(component, to, { actorKind }) {
   if (toIndex !== fromIndex + 1 && to !== "deprecated") {
     throw new ComponentError(`invalid component transition: ${component.lifecycle_state} -> ${to}`);
   }
-  if (to === "confirmed" && actorKind !== "human") {
-    throw new ComponentError("an agent must not silently promote a component to confirmed (§19)");
+  if (actorKind !== "human") {
+    throw new ComponentError("component lifecycle advancement is a human decision at every step (§7.3, §19)");
   }
   return { ...component, lifecycle_state: to };
 }

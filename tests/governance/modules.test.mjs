@@ -93,7 +93,7 @@ test("REL-002/components: suggestions carry evidence, dispositions are human, co
   assert.throws(() => disposeComponent(suggestion, { disposition: "accept", actorKind: "ai", at: "t" }), /human actor/);
   const accepted = disposeComponent(suggestion, { disposition: "accept", actorKind: "human", at: "t" });
   assert.equal(accepted.lifecycle_state, "candidate");
-  assert.throws(() => advanceComponent(accepted, "confirmed", { actorKind: "ai" }), /must not silently promote/);
+  assert.throws(() => advanceComponent(accepted, "confirmed", { actorKind: "ai" }), /human decision at every step/);
   const confirmed = advanceComponent(accepted, "confirmed", { actorKind: "human" });
   assert.equal(advanceComponent(confirmed, "active", { actorKind: "human" }).lifecycle_state, "active");
   assert.throws(() => advanceComponent(accepted, "active", { actorKind: "human" }), ComponentError);
@@ -197,8 +197,17 @@ test("REL-002/planning: waves respect hard prerequisites; blockers rank by downs
     { source: "d", target: "b" },
     { source: "d", target: "x-external", hard: false }
   ];
-  assert.deepEqual(computeWaves(items, dependencies), [["a"], ["b", "c"], ["d"]]);
+  const result = computeWaves(items, dependencies);
+  assert.deepEqual(result.waves, [["a"], ["b", "c"], ["d"]]);
+  assert.deepEqual(result.external_register, [], "soft external edges stay off the register");
+  assert.deepEqual(result.walking_skeleton_candidate, ["a"]);
   assert.throws(() => computeWaves(["a", "b"], [{ source: "a", target: "b" }, { source: "b", target: "a" }]), PlanningError);
+  // Hard external prerequisites are registered and block, never silently satisfied.
+  const external = computeWaves(["a", "b"], [{ source: "a", target: "VENDOR-API" }]);
+  assert.deepEqual(external.waves, [["b"]]);
+  assert.deepEqual(external.blocked_by_external, ["a"]);
+  assert.equal(external.external_register[0].external, "VENDOR-API");
+  assert.match(external.unresolved_questions[0], /VENDOR-API/);
   const blockers = criticalBlockers(items, dependencies);
   assert.equal(blockers[0].item, "a");
   assert.equal(blockers[0].blocks, 3);
@@ -219,7 +228,8 @@ test("REL-002/migration: idempotent 0.1->0.2 migration with a full mapping repor
   // Statuses split without inventing evidence.
   const synced = report.mappings.find((mapping) => mapping.old_status === "approved-and-synced");
   assert.equal(synced.new_states.synchronization_state, "not-synchronized");
-  assert.match(synced.note, /no read-back evidence/);
+  assert.equal(synced.new_states.governance_state, "reviewed", "a legacy approval never mints a 0.2 approved state");
+  assert.match(synced.note, /no conforming decision or read-back evidence/);
   const tested = report.mappings.find((mapping) => mapping.old_status === "tested");
   assert.equal(tested.new_states.verification_outcome, "none");
   // Relationships rewritten to UUID URNs.
@@ -227,6 +237,8 @@ test("REL-002/migration: idempotent 0.1->0.2 migration with a full mapping repor
   assert.ok(isCanonicalIdentity(story.relationships[0].target));
   // Legacy approvals become historical evidence only.
   assert.equal(project.historical_approvals[0].status, "historical-evidence");
+  assert.ok(isCanonicalIdentity(project.historical_approvals[0].artifact), "historical approvals reference the minted identity");
+  assert.equal(project.historical_approvals[0].legacy_artifact_alias, "REQ-1");
   // Idempotence.
   const again = migrateLegacyProject(project);
   assert.equal(again.report.already_migrated, true);
@@ -244,4 +256,58 @@ test("REL-002/self-review: the §44.3 fixture is anchored, adjudicated, and clas
     assert.ok(["accepted", "rejected-as-moot", "open-erratum"].includes(finding.disposition), finding.id);
     assert.ok(finding.fixed_in, finding.id);
   }
+});
+
+test("REL-002/planning: dependency records require type, rationale, origin, confidence, hardness (§21)", async () => {
+  const { createDependency, createNonDevelopmentTask, NON_DEVELOPMENT_CATEGORIES } = await import("../../core/lib/planning.mjs");
+  const dependency = createDependency({ source: "a", target: "b", type: "api-contract", rationale: "consumes cart API", origin: "ai", confidence: "medium", hard: true });
+  assert.equal(dependency.status, "candidate", "AI dependencies stay candidates (§21)");
+  assert.equal(createDependency({ source: "a", target: "b", type: "data", rationale: "r", origin: "human", confidence: "high", hard: false }).status, "accepted");
+  assert.throws(() => createDependency({ source: "a", target: "b", type: "api-contract", origin: "ai", confidence: "medium", hard: true }), /requires rationale/);
+  assert.throws(() => createDependency({ source: "a", target: "b", type: "vibes", rationale: "r", origin: "ai", confidence: "low", hard: true }), PlanningError);
+  assert.equal(NON_DEVELOPMENT_CATEGORIES.length, 14);
+  const task = createNonDevelopmentTask({ category: "legal", title: "DPA review", completionPolicy: "counsel sign-off", owner: actor });
+  assert.equal(task.type, "task");
+  assert.ok(!("acceptance_criteria" in task), "no fake user story (§20.3)");
+  assert.throws(() => createNonDevelopmentTask({ category: "vibes", title: "t", completionPolicy: "p", owner: actor }), PlanningError);
+});
+
+test("REL-002/semantic-review: the initial reviewer emits clearly labeled suggestions only (§24.2, §45.1)", async () => {
+  const { semanticReview } = await import("../../core/lib/semantic-review.mjs");
+  const result = semanticReview({
+    statement: "The system shall be fast and easy and flexible or robust as needed",
+    acceptance_criteria: ["the system shall be fast and easy and flexible or robust as needed"]
+  });
+  assert.equal(result.semantic, true);
+  assert.ok(result.findings.length >= 4);
+  for (const finding of result.findings) {
+    assert.equal(finding.semantic, true);
+    assert.equal(finding.status, "suggestion", "semantic findings never block on their own");
+    assert.equal(finding.severity, "advisory");
+    assert.ok(finding.review_version);
+  }
+  const rules = result.findings.map((finding) => finding.rule);
+  assert.ok(rules.includes("RDLC-SEM-001"), "vague terms");
+  assert.ok(rules.includes("RDLC-SEM-002"), "compound requirement");
+  assert.ok(rules.includes("RDLC-SEM-004") || rules.includes("RDLC-SEM-005"), "criteria checks");
+  assert.deepEqual(semanticReview({ statement: "The checkout service shall preserve an incomplete checkout for the configured retention period.", acceptance_criteria: ["rejects invalid sessions with an error"] }).findings, []);
+});
+
+test("REL-002/fixes: locked-field null bypass closed; unknown-profile rollUp refused; AI advancement blocked (review findings)", async () => {
+  const { resolveTemplate } = await import("../../core/lib/templates.mjs");
+  assert.throws(() => resolveTemplate([
+    { level: "organization", version: "o/v1", fields: { priority: { locked: true, required: true, allowed_values: ["a", "b"] } } },
+    { level: "project", version: "p/v1", fields: { priority: { allowed_values: null } } }
+  ]), /weaken locked field/);
+  assert.throws(() => resolveTemplate([
+    { level: "organization", version: "o/v1", fields: { statement: { locked: true, required: true } } },
+    { level: "project", version: "p/v1", fields: { statement: { required: null } } }
+  ]), /weaken locked field/);
+
+  const { rollUp: roll } = await import("../../core/lib/estimation.mjs");
+  assert.throws(() => roll([{ profile: "ghost-a", value: 100 }, { profile: "ghost-b", value: 5 }], {}), /unknown estimation profile/);
+
+  const { advanceComponent: advance, suggestComponent: suggest } = await import("../../core/lib/components.mjs");
+  const suggestion = suggest({ name: "X", componentClass: "product-area", responsibility: "r", causedBy: [mintIdentity()], confidence: "low" });
+  assert.throws(() => advance(suggestion, "candidate", { actorKind: "ai" }), /human decision at every step/);
 });

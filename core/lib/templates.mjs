@@ -33,9 +33,11 @@ export function resolveTemplate(packs) {
     for (const [name, definition] of Object.entries(pack.fields ?? {})) {
       const existing = fields[name];
       if (existing?.locked) {
+        const removesConstraint = (key) => key in definition && (definition[key] === null || definition[key] === undefined || definition[key] === false) && Boolean(existing[key]);
         const weakens =
-          (existing.required && definition.required === false) ||
-          (existing.allowed_values && definition.allowed_values &&
+          removesConstraint("required") ||
+          removesConstraint("allowed_values") ||
+          (existing.allowed_values && Array.isArray(definition.allowed_values) &&
             !definition.allowed_values.every((value) => existing.allowed_values.includes(value)));
         if (weakens || definition.locked === false) {
           throw new TemplateError(

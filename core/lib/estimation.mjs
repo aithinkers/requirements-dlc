@@ -74,8 +74,10 @@ export function suggestEstimate(profile, { artifact, value, method, rationale, a
 export function confirmEstimate(profile, estimate, { value, actor, at, approvedChange = null }) {
   assertValue(profile, value);
   if (!profile.confirmers.includes(actor)) throw new EstimationError(`${actor} is not a configured confirmer for ${profile.id}`);
-  if (estimate.status === "confirmed" && estimate.value !== value && !approvedChange) {
-    throw new EstimationError("a confirmed estimate changes only through an approved change (§22.3)");
+  if (estimate.status === "confirmed" && estimate.value !== value) {
+    if (!approvedChange || !/^(urn:uuid:|[A-Z]+-\d+)/.test(String(approvedChange))) {
+      throw new EstimationError("a confirmed estimate changes only through an identified approved change (§22.3)");
+    }
   }
   return {
     ...estimate, status: "confirmed", value,
@@ -99,7 +101,10 @@ export function convertEstimate(profile, value, targetScheme) {
 
 /** §22.3 — values from different team scales never aggregate. */
 export function rollUp(estimates, profiles) {
-  const schemes = new Set(estimates.map((estimate) => profiles[estimate.profile]?.id));
+  for (const estimate of estimates) {
+    if (!profiles[estimate.profile]) throw new EstimationError(`unknown estimation profile: ${estimate.profile} (§22.3)`);
+  }
+  const schemes = new Set(estimates.map((estimate) => profiles[estimate.profile].id));
   if (schemes.size > 1) throw new EstimationError("estimates from incompatible team scales are never combined (§22.3)");
   const numeric = estimates.every((estimate) => typeof estimate.value === "number");
   if (!numeric) throw new EstimationError("only numeric same-profile estimates roll up");
