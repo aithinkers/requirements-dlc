@@ -172,10 +172,16 @@
         "§16.2.2",
         "§16.2.3"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/lib/intake/index.mjs",
+          "core/lib/intake/detect.mjs",
+          "scripts/generate-intake-fixtures.mjs"
+        ],
+        "tests": [
+          "tests/governance/intake.test.mjs"
+        ]
       }
     },
     {

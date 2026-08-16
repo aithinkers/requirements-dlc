@@ -1,0 +1,19 @@
+From: alex@example.com
+To: sam@example.com
+Subject: Checkout scope
+Date: Fri, 15 Aug 2026 10:00:00 +0000
+Message-ID: <m1@example.com>
+Content-Type: multipart/mixed; boundary="B1"
+MIME-Version: 1.0
+
+--B1
+Content-Type: text/plain
+
+Please preserve incomplete checkouts.
+
+--B1
+Content-Disposition: attachment; filename="scope.pdf"
+Content-Type: application/pdf
+
+JVBERi0=
+--B1--
