@@ -30,7 +30,7 @@
     "test": "npm run check:governance && npm run test:governance"
   },
   "dependencies": {
-    "canonicalize": "^4.0.0",
+    "canonicalize": "4.0.0",
     "yaml": "2.9.0"
   },
   "devDependencies": {

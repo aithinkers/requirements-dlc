@@ -47,10 +47,41 @@ test("FEAT-003: NFC normalization makes composed and decomposed strings hash-equ
   assert.equal(composed.toString("utf8"), decomposed.toString("utf8"));
 });
 
-test("FEAT-003: timestamps normalize to UTC Z and reject non-instants", () => {
-  assert.equal(normalizeTimestamp("2026-08-15T19:02:00+02:00"), "2026-08-15T17:02:00Z");
+test("FEAT-003: timestamp canonicalization is injective at millisecond precision", () => {
+  // One instant, many notations -> exactly one canonical form.
+  const canonical = "2026-08-15T17:02:00.000Z";
+  for (const notation of [
+    "2026-08-15T19:02:00+02:00",
+    "2026-08-15T17:02:00Z",
+    "2026-08-15T17:02:00.0Z",
+    "2026-08-15T17:02:00.000000Z",
+    "2026-08-15t17:02:00z"
+  ]) {
+    assert.equal(normalizeTimestamp(notation), canonical, notation);
+  }
   assert.equal(normalizeTimestamp("2026-08-15T17:02:00.250Z"), "2026-08-15T17:02:00.250Z");
+  assert.equal(normalizeTimestamp("2026-08-15T17:02:00.2500Z"), "2026-08-15T17:02:00.250Z");
+  // Informative sub-millisecond precision fails closed instead of truncating.
+  assert.throws(() => normalizeTimestamp("2026-08-15T17:02:00.123456Z"), CanonicalizationError);
   assert.throws(() => normalizeTimestamp("2026-08-15 17:02:00"), CanonicalizationError);
+});
+
+test("FEAT-003: object keys are NFC-normalized and collisions fail closed", () => {
+  const composedKey = "caf\u00e9";
+  const decomposedKey = "café";
+  const a = canonicalBytes({ [composedKey]: 1 }).toString("utf8");
+  const b = canonicalBytes({ [decomposedKey]: 1 }).toString("utf8");
+  assert.equal(a, b);
+  assert.throws(
+    () => canonicalBytes({ [composedKey]: 1, [decomposedKey]: 2 }),
+    CanonicalizationError
+  );
+});
+
+test("FEAT-003: set-sort ties break deterministically, independent of producer order", () => {
+  const forward = canonicalBytes({ r: [{ k: "a", v: 2 }, { k: "a", v: 1 }] }, { r: ["k"] }).toString("utf8");
+  const reversed = canonicalBytes({ r: [{ k: "a", v: 1 }, { k: "a", v: 2 }] }, { r: ["k"] }).toString("utf8");
+  assert.equal(forward, reversed);
 });
 
 test("FEAT-003: duplicate object keys are rejected at parse time", () => {

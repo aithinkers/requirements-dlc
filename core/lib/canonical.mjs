@@ -26,18 +26,25 @@ const TIMESTAMP_PATTERN = /^(\d{4}-\d{2}-\d{2})[Tt](\d{2}:\d{2}:\d{2})(\.\d+)?([
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
 /**
- * Normalize an RFC 3339 instant to UTC with a Z suffix (§12.6).
- * Fractional-second digits are preserved as written when already UTC;
- * offset instants are converted using millisecond precision.
+ * Normalize an RFC 3339 instant to UTC with a Z suffix at exactly the
+ * profile's canonical millisecond precision (§12.5 item 4, §12.6).
+ *
+ * The canonical form is injective: one instant has exactly one canonical
+ * string regardless of how the producer wrote it (offset, missing or padded
+ * fraction). Sub-millisecond precision that carries information fails closed
+ * rather than being silently truncated.
  */
 export function normalizeTimestamp(value) {
-  if (typeof value !== "string" || !TIMESTAMP_PATTERN.test(value)) {
-    throw new CanonicalizationError(`not an RFC 3339 instant: ${value}`);
+  const match = typeof value === "string" ? value.match(TIMESTAMP_PATTERN) : null;
+  if (!match) throw new CanonicalizationError(`not an RFC 3339 instant: ${value}`);
+  const fraction = match[3] ? match[3].slice(1) : "";
+  if (fraction.length > 3 && /[1-9]/.test(fraction.slice(3))) {
+    throw new CanonicalizationError(`sub-millisecond precision exceeds the canonical profile precision: ${value}`);
   }
-  if (UTC_TIMESTAMP_PATTERN.test(value)) return value;
-  const parsed = new Date(value);
+  const milliseconds = fraction.slice(0, 3).padEnd(3, "0");
+  const parsed = new Date(`${match[1]}T${match[2]}.${milliseconds}${match[4].toUpperCase()}`);
   if (Number.isNaN(parsed.getTime())) throw new CanonicalizationError(`unparseable instant: ${value}`);
-  return parsed.toISOString().replace(/\.000Z$/, "Z");
+  return parsed.toISOString();
 }
 
 /**
@@ -63,12 +70,17 @@ function compareByKeys(keys) {
       if (left === right) continue;
       if (left === undefined) return -1;
       if (right === undefined) return 1;
+      if (typeof left === "number" && typeof right === "number") return left - right;
       const l = String(left);
       const r = String(right);
       if (l < r) return -1;
       if (l > r) return 1;
     }
-    return 0;
+    // Deterministic tie-break: entries equal on every declared key compare by
+    // their full canonical serialization, so hashes never depend on producer order.
+    const l = rfc8785(a) ?? "";
+    const r = rfc8785(b) ?? "";
+    return l < r ? -1 : l > r ? 1 : 0;
   };
 }
 
@@ -98,8 +110,12 @@ export function normalizeValue(value, hints = {}, path = "$") {
   }
   if (typeof value === "object") {
     const result = {};
-    for (const [key, entry] of Object.entries(value)) {
+    for (const [rawKey, entry] of Object.entries(value)) {
       if (entry === undefined) continue;
+      const key = rawKey.normalize("NFC");
+      if (key !== rawKey && Object.hasOwn(value, key)) {
+        throw new CanonicalizationError(`NFC key collision at ${path}.${key}`);
+      }
       const childPath = `${path}.${key}`;
       let normalized = normalizeValue(entry, hints, childPath);
       const setKeys = hints[key];
