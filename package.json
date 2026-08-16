@@ -27,7 +27,9 @@
   "scripts": {
     "check:governance": "node scripts/verify-governance.mjs",
     "test:governance": "node --test tests/governance/*.test.mjs",
-    "test": "npm run check:governance && npm run test:governance"
+    "test": "npm run check:governance && npm run test:governance",
+    "generate:distribution": "node scripts/generate-distribution.mjs",
+    "check:distribution": "node scripts/generate-distribution.mjs --check"
   },
   "dependencies": {
     "canonicalize": "4.0.0",

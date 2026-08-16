@@ -1,0 +1,136 @@
+{
+  "schema_version": "rdlc.commands/v0.2",
+  "namespace": "rdlc",
+  "commands": [
+    {
+      "verb": "start",
+      "purpose": "Start or resume an engagement.",
+      "mutates_external": false
+    },
+    {
+      "verb": "status",
+      "purpose": "Show read-only state, gates, findings, and next action.",
+      "mutates_external": false
+    },
+    {
+      "verb": "capture",
+      "purpose": "Record minimally structured user input or source material.",
+      "mutates_external": false
+    },
+    {
+      "verb": "triage",
+      "purpose": "Classify captures and determine disposition.",
+      "mutates_external": false
+    },
+    {
+      "verb": "promote",
+      "purpose": "Run promotion review and move accepted capture or working content into shared draft.",
+      "mutates_external": false
+    },
+    {
+      "verb": "discover",
+      "purpose": "Gather document, tracker, stakeholder, and optional KB evidence.",
+      "mutates_external": false
+    },
+    {
+      "verb": "draft",
+      "purpose": "Draft or revise requirements and related artifacts.",
+      "mutates_external": false
+    },
+    {
+      "verb": "claim",
+      "purpose": "Declare, inspect, renew, or release an advisory work claim.",
+      "mutates_external": false
+    },
+    {
+      "verb": "coverage",
+      "purpose": "Show requirement- and criterion-level working, draft, and approved coverage.",
+      "mutates_external": false
+    },
+    {
+      "verb": "collisions",
+      "purpose": "Detect and resolve concurrent and semantic collisions.",
+      "mutates_external": false
+    },
+    {
+      "verb": "components",
+      "purpose": "Suggest, review, and manage components.",
+      "mutates_external": false
+    },
+    {
+      "verb": "decompose",
+      "purpose": "Create planning hierarchy, stories, and tasks.",
+      "mutates_external": false
+    },
+    {
+      "verb": "dependencies",
+      "purpose": "Generate and review dependency planning.",
+      "mutates_external": false
+    },
+    {
+      "verb": "estimate",
+      "purpose": "Configure, suggest, and confirm estimates.",
+      "mutates_external": false
+    },
+    {
+      "verb": "raid",
+      "purpose": "Create and review RAID+D records.",
+      "mutates_external": false
+    },
+    {
+      "verb": "comments-review",
+      "purpose": "Review newly imported source and tracker comments.",
+      "mutates_external": false
+    },
+    {
+      "verb": "review",
+      "purpose": "Run deterministic and semantic quality checks.",
+      "mutates_external": false
+    },
+    {
+      "verb": "dedupe",
+      "purpose": "Generate and adjudicate duplicate candidates.",
+      "mutates_external": false
+    },
+    {
+      "verb": "trace",
+      "purpose": "Validate graph links and produce coverage.",
+      "mutates_external": false
+    },
+    {
+      "verb": "tests",
+      "purpose": "Generate or review test candidates.",
+      "mutates_external": false
+    },
+    {
+      "verb": "readiness",
+      "purpose": "Build the readiness package and approval plan.",
+      "mutates_external": false
+    },
+    {
+      "verb": "approve",
+      "purpose": "Record a permitted stakeholder decision.",
+      "mutates_external": true
+    },
+    {
+      "verb": "baseline",
+      "purpose": "Create an immutable approved baseline.",
+      "mutates_external": false
+    },
+    {
+      "verb": "sync",
+      "purpose": "Pull, plan, preview, apply, and verify connector changes.",
+      "mutates_external": true
+    },
+    {
+      "verb": "change",
+      "purpose": "Analyze and govern a baseline change.",
+      "mutates_external": false
+    },
+    {
+      "verb": "doctor",
+      "purpose": "Validate installation, policy, state, and connectors.",
+      "mutates_external": false
+    }
+  ]
+}
