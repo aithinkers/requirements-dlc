@@ -13,7 +13,13 @@
   "bugs": {
     "url": "https://github.com/aithinkers/requirements-dlc/issues"
   },
-  "keywords": ["requirements", "governance", "agents", "traceability", "lifecycle"],
+  "keywords": [
+    "requirements",
+    "governance",
+    "agents",
+    "traceability",
+    "lifecycle"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22 <25"
@@ -24,6 +30,7 @@
     "test": "npm run check:governance && npm run test:governance"
   },
   "dependencies": {
+    "canonicalize": "^4.0.0",
     "yaml": "2.9.0"
   },
   "devDependencies": {

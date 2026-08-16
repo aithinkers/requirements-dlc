@@ -94,10 +94,15 @@
         "§12.5",
         "§12.6"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/lib/canonical.mjs",
+          "fixtures/canonical/kat.json"
+        ],
+        "tests": [
+          "tests/governance/canonical.test.mjs"
+        ]
       }
     },
     {

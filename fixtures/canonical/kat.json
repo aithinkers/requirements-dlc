@@ -1,0 +1,176 @@
+{
+  "profile": "rdlc-jcs-v1",
+  "cases": [
+    {
+      "name": "unicode-nfc-normalization",
+      "kind": "canonical",
+      "input": {
+        "text": "café",
+        "plain": "café"
+      },
+      "hints": {},
+      "expected_canonical": "{\"plain\":\"café\",\"text\":\"café\"}",
+      "expected_hash": "sha256:4f318c37d9e9b43f7f8fb74bea5b719be7c251dc810e176b0a2c4723db5e56a0"
+    },
+    {
+      "name": "timestamp-offset-to-utc",
+      "kind": "canonical",
+      "input": {
+        "at": "2026-08-15T19:02:00+02:00",
+        "already": "2026-08-15T17:02:00Z",
+        "fractional": "2026-08-15T17:02:00.250Z"
+      },
+      "hints": {},
+      "expected_canonical": "{\"already\":\"2026-08-15T17:02:00Z\",\"at\":\"2026-08-15T17:02:00Z\",\"fractional\":\"2026-08-15T17:02:00.250Z\"}",
+      "expected_hash": "sha256:49767fc5547e9f724b6f2c718d68d00a8c003ac870a5bdb89931c83a640d95a4"
+    },
+    {
+      "name": "numeric-boundaries",
+      "kind": "canonical",
+      "input": {
+        "safeMax": 9007199254740991,
+        "negative": -42,
+        "zero": 0,
+        "fraction": 0.30000000000000004,
+        "small": 1e-21
+      },
+      "hints": {},
+      "expected_canonical": "{\"fraction\":0.30000000000000004,\"negative\":-42,\"safeMax\":9007199254740991,\"small\":1e-21,\"zero\":0}",
+      "expected_hash": "sha256:209be5b579cd2efe1ce9566b6b692e09905e2d0a8d01c906ab5ee056f01b939e"
+    },
+    {
+      "name": "set-like-array-sorted",
+      "kind": "canonical",
+      "input": {
+        "relationships": [
+          {
+            "type": "satisfies",
+            "target": "urn:uuid:0198b7d5-8c4a-7d22-a142-6b5e3c9f7011"
+          },
+          {
+            "type": "derives-from",
+            "target": "urn:uuid:0198b7d0-5b1e-7a30-9c2d-1e6b8f5a3c09"
+          },
+          {
+            "type": "derives-from",
+            "target": "urn:uuid:0198b805-0f1e-7d2c-9b3a-a1b2c3d4e5f6"
+          }
+        ]
+      },
+      "hints": {
+        "relationships": [
+          "type",
+          "target"
+        ]
+      },
+      "expected_canonical": "{\"relationships\":[{\"target\":\"urn:uuid:0198b7d0-5b1e-7a30-9c2d-1e6b8f5a3c09\",\"type\":\"derives-from\"},{\"target\":\"urn:uuid:0198b805-0f1e-7d2c-9b3a-a1b2c3d4e5f6\",\"type\":\"derives-from\"},{\"target\":\"urn:uuid:0198b7d5-8c4a-7d22-a142-6b5e3c9f7011\",\"type\":\"satisfies\"}]}",
+      "expected_hash": "sha256:2e7107f828a9b2caf8cbae96250089eba25998e188237cd99f1d6de5e3d5fcd7"
+    },
+    {
+      "name": "ordered-array-preserved",
+      "kind": "canonical",
+      "input": {
+        "acceptance_criteria": [
+          "z-last-first",
+          "a-first-last"
+        ]
+      },
+      "hints": {},
+      "expected_canonical": "{\"acceptance_criteria\":[\"z-last-first\",\"a-first-last\"]}",
+      "expected_hash": "sha256:f67bf22df005cbbca91e6ed7d72bb2e62d38d4645e9534a3e2aca3cf8b23ba91"
+    },
+    {
+      "name": "null-vs-absent",
+      "kind": "canonical",
+      "input": {
+        "present": null
+      },
+      "hints": {},
+      "expected_canonical": "{\"present\":null}",
+      "expected_hash": "sha256:924c481da1aca4bbd856f20e4aaef20f67c34fccd0b5e27cb2647b8c45ee21ac"
+    },
+    {
+      "name": "key-ordering-jcs",
+      "kind": "canonical",
+      "input": {
+        "b": 1,
+        "a": 2,
+        "é": 3,
+        "Z": 4
+      },
+      "hints": {},
+      "expected_canonical": "{\"Z\":4,\"a\":2,\"b\":1,\"é\":3}",
+      "expected_hash": "sha256:f42490331d281d5684ce3ead1597c84179d3c711e721b413c9fef552265d56a0"
+    },
+    {
+      "name": "content-hash-governed-projection",
+      "kind": "content_hash",
+      "input": {
+        "schema_version": "rdlc.artifact/v0.2",
+        "id": "urn:uuid:0198b7e0-6a2f-7b41-8d3e-2f7c9a6b4d10",
+        "title": "Preserve an incomplete checkout",
+        "statement": "The checkout service shall preserve an incomplete checkout.",
+        "relationships": [
+          {
+            "type": "derives-from",
+            "target": "urn:uuid:0198b7d0-5b1e-7a30-9c2d-1e6b8f5a3c09"
+          }
+        ],
+        "display_id": "REQ-104",
+        "updated_at": "2026-08-15T16:12:00Z",
+        "unknown_extension": {
+          "vendor": "x"
+        }
+      },
+      "schema": {
+        "x-rdlc-governed": [
+          "title",
+          "statement",
+          "relationships"
+        ],
+        "x-rdlc-set-keys": {
+          "relationships": [
+            "type",
+            "target"
+          ]
+        }
+      },
+      "expected_hash": "sha256:40aa0b0abc8d0615c03ff2bfdb3cc4705829c671cb7c72e99fc580e5fb0c54bb"
+    },
+    {
+      "name": "content-hash-ignores-excluded-and-ungoverned",
+      "kind": "content_hash",
+      "input": {
+        "schema_version": "rdlc.artifact/v0.2",
+        "id": "urn:uuid:0198b7e0-6a2f-7b41-8d3e-2f7c9a6b4d10",
+        "title": "Preserve an incomplete checkout",
+        "statement": "The checkout service shall preserve an incomplete checkout.",
+        "relationships": [
+          {
+            "type": "derives-from",
+            "target": "urn:uuid:0198b7d0-5b1e-7a30-9c2d-1e6b8f5a3c09"
+          }
+        ],
+        "display_id": "REQ-999",
+        "updated_at": "2027-01-01T00:00:00Z",
+        "unknown_extension": {
+          "vendor": "y"
+        }
+      },
+      "schema": {
+        "x-rdlc-governed": [
+          "title",
+          "statement",
+          "relationships"
+        ],
+        "x-rdlc-set-keys": {
+          "relationships": [
+            "type",
+            "target"
+          ]
+        }
+      },
+      "expected_hash": "sha256:40aa0b0abc8d0615c03ff2bfdb3cc4705829c671cb7c72e99fc580e5fb0c54bb"
+    }
+  ]
+}
