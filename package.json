@@ -44,7 +44,8 @@
     "ajv": "8.20.0"
   },
   "bin": {
-    "rdlc-setup": "./scripts/setup.mjs"
+    "rdlc-setup": "./scripts/setup.mjs",
+    "rdlc-sensors": "./scripts/run-sensors.mjs"
   },
   "files": [
     "core/",
@@ -58,7 +59,8 @@
     "README.md",
     "SECURITY.md",
     "SUPPORT.md",
-    "LICENSE"
+    "LICENSE",
+    "scripts/run-sensors.mjs"
   ],
   "exports": {
     "./canonical": "./core/lib/canonical.mjs",
@@ -80,6 +82,7 @@
     "./connectors/jira": "./core/connectors/jira/index.mjs",
     "./schemas": "./core/schemas/v0.2/index.mjs",
     "./template-catalog": "./core/lib/template-catalog.mjs",
-    "./connector-config": "./core/lib/connector-config.mjs"
+    "./connector-config": "./core/lib/connector-config.mjs",
+    "./sensors": "./core/lib/sensors.mjs"
   }
 }

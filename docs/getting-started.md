@@ -79,6 +79,14 @@ Open the project in Claude Code:
    apply, read-back verification, and receipts. The default write mode is
    `propose`; nothing touches your tracker without the configured approval.
 
+Every session opens with a one-line orientation ("engagement at stage X,
+next: …") and a write guard keeps approval and baseline evidence safe from
+accidental edits — both installed automatically. `npx -p github:aithinkers/requirements-dlc rdlc-sensors`
+gives anyone a plain-language health check ("3 stories are missing acceptance
+criteria → /rdlc-draft") — no reading of rule codes required. Team context
+lives in `rdlc/spaces/main/memory/` (organization, project, team) — fill the
+three scaffolded files in and agents will honor them every session.
+
 `/rdlc-status` answers "where was I?" from durable files alone, and
 `/rdlc-doctor` validates installation, policy, and state.
 
