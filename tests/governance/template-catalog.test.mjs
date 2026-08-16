@@ -51,7 +51,7 @@ test("FEAT-016: artifact validation names missing expected elements (§24.1)", (
   assert.deepEqual(catalog.validateArtifact({}), ["artifact has no type; no template can be resolved"]);
 });
 
-test("FEAT-016: the promotion gate consumes catalog validation by default (§35.3 step 3)", () => {
+test("FEAT-016: catalog validation blocks promotion when wired as the template validator (§35.3 step 3)", () => {
   const working = { id: mintIdentity(), version: 1, type: "story", statement: "incomplete story" };
   const review = promotionReview({ working, shared: { artifacts: [] }, validators: { template: catalog.promotionValidator() } });
   assert.equal(review.passed, false);
@@ -111,4 +111,23 @@ test("FEAT-016: externally updated items that break the format surface as drift 
   assert.equal(drifted[0].rule, "RDLC-FMT-003");
   assert.ok(drifted[0].violations.some((finding) => finding.template_field === "acceptance_criteria"));
   assert.ok(drifted[0].disposition_options.includes("create-change-request"), "drift is review work, never auto-repair");
+});
+
+test("FEAT-016: memoized templates are deeply frozen; caller mutation cannot poison the cache (review MEDIUM)", async () => {
+  const fresh = await loadCatalog();
+  const resolved = fresh.resolve("story");
+  assert.throws(() => { resolved.fields.acceptance_criteria.required = false; }, TypeError);
+  assert.equal(fresh.resolve("story").fields.acceptance_criteria.required, true);
+  // Mutating a caller-held overlay after construction has no effect either.
+  const overlay = { level: "project", version: "p/v1", artifact_types: { story: { fields: { components: { required: true } } } } };
+  const overlaid = await loadCatalog({ overlays: [overlay] });
+  overlay.artifact_types.story.fields.acceptance_criteria = { required: false };
+  assert.equal(overlaid.resolve("story").fields.acceptance_criteria.required, true);
+  // Snapshot guard and overlay field-name charset (review LOWs).
+  const { TemplateError: TE } = await import("../../core/lib/templates.mjs");
+  assert.throws(() => fresh.validateProviderItem(null, { version: "v", artifact_type: "story", fields: {} }), TE);
+  const dashed = await loadCatalog({ overlays: [{ level: "project", version: "p/v1", artifact_types: { story: { fields: { "risk-note": { required: true } } } } }] });
+  const result = dashed.validateProviderItem({ item_id: "X-1", fields: {} }, { version: "v", artifact_type: "story", fields: { "risk-note": "customfield_risk" } });
+  const dashFinding = result.findings.find((finding) => finding.template_field === "risk-note");
+  assert.equal(dashFinding.provider_field, "customfield_risk", "dashed overlay names attribute correctly");
 });

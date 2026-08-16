@@ -18,6 +18,14 @@ import { fileURLToPath } from "node:url";
 
 import { TemplateError, resolveTemplate, validateAgainstTemplate } from "./templates.mjs";
 
+function deepFreeze(value) {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const entry of Object.values(value)) deepFreeze(entry);
+  }
+  return value;
+}
+
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** Load the authored framework pack (plus optional overlay packs). */
@@ -36,7 +44,9 @@ export class TemplateCatalog {
   #resolved = new Map();
 
   constructor(packs) {
-    this.#packs = packs;
+    // Clone + freeze so later mutation of caller-held pack objects can never
+    // bypass resolution-time lock validation (review finding).
+    this.#packs = deepFreeze(structuredClone(packs));
   }
 
   types() {
@@ -50,7 +60,9 @@ export class TemplateCatalog {
       .filter((pack) => pack.artifact_types[type])
       .map((pack) => ({ level: pack.level, version: pack.version, fields: pack.artifact_types[type].fields }));
     if (relevant.length === 0) throw new TemplateError(`no template is defined for artifact type: ${type}`);
-    const resolved = resolveTemplate(relevant);
+    // Deep-freeze the memoized result: a consumer mutating a returned
+    // template must throw, never silently poison the cache (review finding).
+    const resolved = deepFreeze(structuredClone(resolveTemplate(relevant.map((pack) => structuredClone(pack)))));
     this.#resolved.set(type, resolved);
     return resolved;
   }
@@ -77,6 +89,9 @@ export class TemplateCatalog {
     if (!mapping?.version || !mapping.artifact_type || !mapping.fields) {
       throw new TemplateError("a versioned provider field mapping is required (§20.1)");
     }
+    if (!snapshot || typeof snapshot !== "object") {
+      throw new TemplateError("a provider snapshot is required (§20.1)");
+    }
     const resolved = this.resolve(mapping.artifact_type);
     const projected = { type: mapping.artifact_type };
     for (const [templateField, providerPath] of Object.entries(mapping.fields)) {
@@ -88,9 +103,9 @@ export class TemplateCatalog {
     const failures = validateAgainstTemplate(projected, resolved);
     const findings = failures.map((failure) => {
       const field =
-        failure.match(/missing: ([a-z_]+)/)?.[1]
-        ?? failure.match(/^field ([a-z_]+)/)?.[1]
-        ?? failure.match(/allowed_values for ([a-z_]+)/)?.[1]
+        failure.match(/missing: ([a-z0-9_-]+)/)?.[1]
+        ?? failure.match(/^field ([a-z0-9_-]+)/)?.[1]
+        ?? failure.match(/allowed_values for ([a-z0-9_-]+)/)?.[1]
         ?? null;
       return {
         rule: "RDLC-FMT-001",

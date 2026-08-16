@@ -11,7 +11,7 @@
     "Planning"
   ],
   "partial_modules": {
-    "Planning": "implemented: dependency records with rationale/origin/confidence, cycle detection, planning waves with an external dependency register and walking-skeleton candidate, critical blockers, coverage/collision review, estimation profiles, RAID+D, non-development task categories, and per-type content templates for every hierarchy level (\u00a720.2) with connector field validation and external format-drift detection; outstanding depth: \u00a720.1 full company-setup resolution beyond issue-type/field discovery and \u00a721 release/milestone slicing"
+    "Planning": "implemented: dependency records with rationale/origin/confidence, cycle detection, planning waves with an external dependency register and walking-skeleton candidate, critical blockers, coverage/collision review, estimation profiles, RAID+D, non-development task categories, and per-type content templates for every hierarchy level (\u00a720.2) with library-level connector field validation and external format-drift detection (catalog wiring into the Jira poll pipeline and the promotion default is engagement configuration, not automatic); outstanding depth: \u00a720.1 full company-setup resolution beyond issue-type/field discovery and \u00a721 release/milestone slicing"
   },
   "connectors": [
     "Connected:Jira-Cloud-Company-Managed"
