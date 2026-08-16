@@ -12,6 +12,9 @@ process.stdin.on("data", (chunk) => { input += chunk; });
 process.stdin.on("end", () => {
   let path = "";
   try { path = JSON.parse(input)?.tool_input?.file_path ?? ""; } catch { /* no path, allow */ }
+  // Normalize before matching: backslashes, duplicate slashes, and ./ hops
+  // must not slip past the rules (defense in depth).
+  path = String(path).replace(/\\/g, "/").replace(/\/\.\//g, "/").replace(/\/{2,}/g, "/");
   const rules = [
     [/rdlc\/(spaces\/[^/]+\/engagements\/[^/]+\/)?(approvals|baselines)\//,
       "Approvals and baselines are evidence — editing them by hand would break the audit trail. Use /rdlc-approve or /rdlc-baseline instead."],

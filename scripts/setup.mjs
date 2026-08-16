@@ -269,15 +269,20 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
     try { settings = JSON.parse(await readFile(settingsPath, "utf8")); } catch (error) {
       if (error?.code !== "ENOENT") settingsReadable = false;
     }
-    if (settingsReadable) {
+    const shapeOk = settingsReadable
+      && (settings.hooks === undefined || (typeof settings.hooks === "object" && !Array.isArray(settings.hooks)
+        && Object.values(settings.hooks).every((value) => Array.isArray(value))));
+    if (settingsReadable && shapeOk) {
       const ours = JSON.parse(await readFile(join(packageRoot, "distribution", "claude-code", "hooks", "hooks.json"), "utf8")).hooks;
       settings.hooks ??= {};
       let merged = false;
       for (const [event, entries] of Object.entries(ours)) {
         settings.hooks[event] ??= [];
         for (const entry of entries) {
-          const marker = entry.hooks[0].command;
-          if (!JSON.stringify(settings.hooks[event]).includes(marker)) {
+          const command = entry.hooks[0].command;
+          const present = settings.hooks[event].some((existing) =>
+            (existing.hooks ?? []).some((hook) => hook.command === command));
+          if (!present) {
             settings.hooks[event].push(entry);
             merged = true;
           }
@@ -289,7 +294,7 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
         results.hooks_merged = true;
       }
     } else {
-      results.hooks_skipped = "existing .claude/settings.json could not be parsed; hooks not merged";
+      results.hooks_skipped = "your .claude/settings.json couldn't be updated automatically (unusual format); to enable the session hooks, copy the entries from rdlc-installed hooks (distribution hooks.json) in yourself — nothing else is affected";
     }
   }
   if (!check) {

@@ -36,7 +36,12 @@ try {
     console.log("R-DLC is set up here but no engagement has started — /rdlc-start begins one.");
   } else {
     const latest = found.sort((a, b) => String(b.updated).localeCompare(String(a.updated)))[0];
-    console.log(`R-DLC: ${found.length > 1 ? `${found.length} engagements; latest` : "engagement"} at stage "${latest.stage}" (${latest.scope} scope). Next: ${latest.next ?? "/rdlc-status"}`);
+    const clean = (value) => value && /^[\w./ :-]{1,80}$/.test(value) ? value : null;
+    if (clean(latest.stage) && clean(latest.scope)) {
+      console.log(`R-DLC: ${found.length > 1 ? `${found.length} engagements; latest` : "engagement"} at stage "${clean(latest.stage)}" (${clean(latest.scope)} scope). Next: ${clean(latest.next) ?? "/rdlc-status"}`);
+    } else {
+      console.log("R-DLC: an engagement exists here — /rdlc-status has the details.");
+    }
   }
 } catch {
   // No rdlc/ here — stay silent; this project may not use R-DLC.

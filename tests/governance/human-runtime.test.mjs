@@ -39,7 +39,7 @@ test("FEAT-020: sensors speak human — headlines, next commands, no rule codes 
   assert.equal(broken.ok, false);
   const schema = broken.results.find((entry) => entry.sensor === "schema");
   assert.equal(schema.ok, false);
-  assert.match(schema.headline, /can't be read reliably/);
+  assert.match(schema.headline, /can't be used reliably/);
   assert.equal(schema.next_command, "/rdlc-doctor");
   const template = broken.results.find((entry) => entry.sensor === "template-catalog");
   assert.equal(template.ok, false);
@@ -161,4 +161,44 @@ test("FEAT-020: stage guides ship for every ALWAYS stage in plain language", asy
     assert.match(guide, /Done when/, stage.slug);
     assert.ok(!/SHALL|MUST NOT|§\d/.test(guide), `${stage.slug} guide avoids spec legalese`);
   }
+});
+
+test("FEAT-020: review fixes — guard normalization, graceful settings shapes, exact-command idempotence, neutral orient", async () => {
+  const target = await installedProject();
+  const guard = (path) => {
+    try {
+      execFileSync("node", [join(target, "rdlc", "hooks", "guard.mjs")], { input: JSON.stringify({ tool_input: { file_path: path } }), stdio: ["pipe", "pipe", "pipe"] });
+      return false;
+    } catch { return true; }
+  };
+  assert.equal(guard("rdlc/./spaces/main/engagements/e1/approvals/a.yaml"), true, "dot-hop blocked");
+  assert.equal(guard("rdlc//spaces//main//engagements//e1//baselines//b.yaml"), true, "double-slash blocked");
+  assert.equal(guard("rdlc\\reference\\stage-protocol.md"), true, "backslash blocked");
+
+  // Wrong-shaped hooks degrade with an actionable note, no crash.
+  const weird = await mkdtemp(join(tmpdir(), "rdlc-weird-"));
+  await mkdir(join(weird, ".claude"), { recursive: true });
+  await writeFile(join(weird, ".claude", "settings.json"), JSON.stringify({ hooks: "oops" }), "utf8");
+  const degraded = await runSetup({ target: weird, log: quiet });
+  assert.match(degraded.hooks_skipped, /couldn't be updated automatically/);
+  assert.equal(JSON.parse(await readFile(join(weird, ".claude", "settings.json"), "utf8")).hooks, "oops", "untouched");
+
+  // A user hook merely MENTIONING our command doesn't suppress the real merge.
+  const mention = await mkdtemp(join(tmpdir(), "rdlc-mention-"));
+  await mkdir(join(mention, ".claude"), { recursive: true });
+  await writeFile(join(mention, ".claude", "settings.json"), JSON.stringify({
+    hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "echo node rdlc/hooks/guard.mjs" }] }] }
+  }), "utf8");
+  await runSetup({ target: mention, log: quiet });
+  const merged = JSON.parse(await readFile(join(mention, ".claude", "settings.json"), "utf8"));
+  const commands = merged.hooks.PreToolUse.flatMap((entry) => entry.hooks.map((hook) => hook.command));
+  assert.ok(commands.includes("node rdlc/hooks/guard.mjs"), "real guard installed despite the mention");
+
+  // Orient falls back to a neutral line on garbled state.
+  const directory = join(target, "rdlc", "spaces", "main", "engagements", "weird");
+  await mkdir(directory, { recursive: true });
+  await writeFile(join(directory, "rdlc-state.yaml"), "active_stage: '{{{'\nupdated_at: 2026-08-16T12:00:00Z\n", "utf8");
+  const oriented = execFileSync("node", [join(target, "rdlc", "hooks", "orient.mjs")], { cwd: target, encoding: "utf8" });
+  assert.ok(!oriented.includes("{{{"), "garbage never reaches the session line");
+  assert.ok(!/\bnull\b/.test(oriented), "no literal null");
 });

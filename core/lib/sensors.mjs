@@ -66,7 +66,7 @@ export const SENSORS = {
     return broken.length === 0
       ? result("schema", true, "All stored records are well-formed.")
       : result("schema", false,
-          `${plural(broken.length, "record")} in this project can't be read reliably — work built on them may be lost or wrong.`,
+          `${plural(broken.length, "record")} in this project can't be used reliably until repaired — nothing has been deleted.`,
           { next: "/rdlc-doctor", details: broken });
   },
 
