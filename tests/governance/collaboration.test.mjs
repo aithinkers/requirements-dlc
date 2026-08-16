@@ -81,7 +81,7 @@ test("FEAT-008: an expired lease is never renewed and takeover mints a newer fen
   assert.equal(second.acquired, true);
   assert.ok(Number(second.lease.fencing_token) > Number(first.lease.fencing_token));
   const audit = await authority.auditLog();
-  assert.ok(audit.some((entry) => entry.event === "expiry-observed"));
+  assert.ok(audit.some((entry) => ["expiry-observed", "renewal-rejected-after-loss"].includes(entry.event)));
 });
 
 test("FEAT-008: protected writes carry the current fencing token; older tokens are rejected (§35.9)", async () => {
@@ -171,4 +171,42 @@ test("FEAT-008: collision decisions record revisions, participants, rationale, a
   assert.throws(() => recordCollisionDecision({ collisionType: "edit", comparedRevisions: [1], participants: [alex], rationale: "r", outcome: "defer" }), /compared revisions/);
   assert.throws(() => recordCollisionDecision({ collisionType: "edit", comparedRevisions: [1, 2], participants: ["not-urn"], rationale: "r", outcome: "defer" }), /canonical participants/);
   assert.throws(() => recordCollisionDecision({ collisionType: "edit", comparedRevisions: [1, 2], participants: [alex], rationale: "", outcome: "defer" }), /rationale/);
+});
+
+test("FEAT-008: field deletions are conflict changes requiring human resolution (review HIGH)", () => {
+  const base = { version: 1, notes: "old" };
+  // Other side deleted, we edited: never silently resurrect.
+  const deletedByOther = sharedWrite({ base, current: { version: 2 }, proposed: { version: 1, notes: "edited" } });
+  assert.equal(deletedByOther.applied, false);
+  assert.equal(deletedByOther.resolution, "human-required");
+  // We deleted, other side edited: never silently drop their edit.
+  const deletedByUs = sharedWrite({ base, current: { version: 2, notes: "their edit" }, proposed: { version: 1 } });
+  assert.equal(deletedByUs.applied, false);
+  // Our uncontested deletion merges through.
+  const cleanDelete = sharedWrite({
+    base: { version: 1, notes: "old", tag: "x" },
+    current: { version: 2, notes: "old", tag: "y" },
+    proposed: { version: 1, tag: "x" }
+  });
+  assert.equal(cleanDelete.applied, true);
+  assert.equal(Object.hasOwn(cleanDelete.artifact, "notes"), false);
+  assert.equal(cleanDelete.artifact.tag, "y");
+});
+
+test("FEAT-008: rejected renewals persist their expiry-observation audit (review MEDIUM)", async () => {
+  let clockMs = 1000;
+  const authority = new LeaseAuthority(new InMemoryCasBackend(), { clock: () => clockMs });
+  const first = await authority.acquire({ resource: "r://audit", purpose: "migrate", holder: { principal: alex }, ttlMs: 100 });
+  clockMs = 2000;
+  await assert.rejects(authority.renew("r://audit", first.lease.id, 100), /must not be renewed/);
+  const audit = await authority.auditLog();
+  assert.ok(audit.some((entry) => entry.event === "renewal-rejected-after-loss"), "audit persisted despite rejection");
+});
+
+test("FEAT-008: field comparison is key-order insensitive (review LOW)", () => {
+  const base = { version: 1, meta: { a: 1, b: 2 } };
+  const current = { version: 1, meta: { b: 2, a: 1 } };
+  const result = sharedWrite({ base, current, proposed: { version: 1, meta: { a: 1, b: 2 }, extra: "new" } });
+  assert.equal(result.applied, true);
+  assert.equal(result.comparison, undefined, "reordered keys are not spurious conflicts");
 });

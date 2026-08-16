@@ -4,7 +4,19 @@
  * collision dispositions (spec §35).
  */
 
+import { canonicalBytes } from "./canonical.mjs";
 import { InMemoryCasBackend, isCanonicalIdentity, mintIdentity } from "./identity.mjs";
+
+/** Key-order-insensitive structural equality. */
+function sameValue(a, b) {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  try {
+    return canonicalBytes({ v: a }).equals(canonicalBytes({ v: b }));
+  } catch {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+}
 
 export class CollaborationError extends Error {
   constructor(message) {
@@ -50,11 +62,12 @@ function scopeIds(claim) {
 export function detectClaimOverlaps(claims, { now }) {
   if (!now) throw new CollaborationError("overlap detection requires the authority's current time");
   const active = claims.filter((claim) => claim.status === "active" && claim.expires_at > now);
+  const sets = active.map((claim) => scopeIds(claim));
   const overlaps = [];
   for (let i = 0; i < active.length; i += 1) {
     for (let j = i + 1; j < active.length; j += 1) {
       if (active[i].actor === active[j].actor) continue;
-      const shared = [...scopeIds(active[i])].filter((id) => scopeIds(active[j]).has(id));
+      const shared = [...sets[i]].filter((id) => sets[j].has(id));
       if (shared.length > 0) {
         overlaps.push({
           claims: [active[i].id, active[j].id],
@@ -96,8 +109,14 @@ export class LeaseAuthority {
       const { state, version } = await this.#backend.read();
       const current = state ?? { leases: {}, fencing: 0, audit: [] };
       const next = structuredClone(current);
+      // A mutator may both mutate (audit, expiry observation) and reject the
+      // caller: `reject` is thrown only AFTER the mutation persists (§35.9 —
+      // every expiry observation is a materialized auditable record).
       const result = mutator(next);
-      if (await this.#backend.compareAndSwap(version, next)) return result;
+      if (await this.#backend.compareAndSwap(version, next)) {
+        if (result && typeof result === "object" && result.reject instanceof Error) throw result.reject;
+        return result;
+      }
     }
     throw new CollaborationError("lease authority contention: retries exhausted");
   }
@@ -150,7 +169,7 @@ export class LeaseAuthority {
       if (lease.status !== "active" || lease.expires_at <= now) {
         lease.status = "expired";
         this.#audit(state, "renewal-rejected-after-loss", lease);
-        throw new CollaborationError("an expired lease must not be renewed (§35.9)");
+        return { reject: new CollaborationError("an expired lease must not be renewed (§35.9)") };
       }
       lease.heartbeat_at = now;
       lease.expires_at = now + ttlMs;
@@ -184,6 +203,12 @@ export class LeaseAuthority {
   /**
    * Fencing guard for the mutation target: every protected write carries the
    * current token and older tokens are rejected (§35.9).
+   *
+   * This check is advisory at the caller: the lease can expire between guard
+   * and write. The mutation target must verify the fencing token atomically
+   * at write time; collision detection and optimistic version checks remain
+   * mandatory (§35.9 "a broken or expired lease never proves the prior
+   * writer stopped").
    */
   async guardWrite(resource, fencingToken) {
     const { state } = await this.#backend.read();
@@ -225,11 +250,17 @@ export function sharedWrite({ base, current, proposed }) {
     && (base.content_hash === undefined || base.content_hash === current.content_hash);
   if (fresh) return { applied: true, artifact: { ...proposed, version: (current.version ?? 0) + 1 } };
 
-  const changedByOther = Object.keys(current).filter((key) => JSON.stringify(current[key]) !== JSON.stringify(base[key]));
-  const changedByUs = Object.keys(proposed).filter((key) => JSON.stringify(proposed[key]) !== JSON.stringify(base[key]));
+  // Diff over the UNION of keys so deletions are first-class changes (§35.7,
+  // §35.6: never silently discard another contributor's changes).
+  const allKeys = [...new Set([...Object.keys(base), ...Object.keys(current), ...Object.keys(proposed)])];
+  const changedByOther = allKeys.filter((key) => !sameValue(current[key], base[key]));
+  const changedByUs = allKeys.filter((key) => !sameValue(proposed[key], base[key]));
   const overlapping = changedByUs.filter((key) => changedByOther.includes(key));
+  const deletionInvolved = overlapping.some(
+    (key) => !Object.hasOwn(current, key) || !Object.hasOwn(proposed, key)
+  );
 
-  const humanRequired = overlapping.some((key) => HUMAN_RESOLUTION_FIELDS.includes(key));
+  const humanRequired = deletionInvolved || overlapping.some((key) => HUMAN_RESOLUTION_FIELDS.includes(key));
   const onlyRelationshipAdditions =
     overlapping.length === 1 && overlapping[0] === "relationships"
     && Array.isArray(base.relationships) && Array.isArray(current.relationships) && Array.isArray(proposed.relationships)
@@ -239,6 +270,11 @@ export function sharedWrite({ base, current, proposed }) {
   if (!humanRequired && (overlapping.length === 0 || onlyRelationshipAdditions)) {
     const merged = { ...current };
     for (const key of changedByUs) {
+      if (!Object.hasOwn(proposed, key)) {
+        // Our own deletion of a field the other side did not touch.
+        if (!changedByOther.includes(key)) delete merged[key];
+        continue;
+      }
       if (key === "relationships" && onlyRelationshipAdditions) {
         const combined = [...current.relationships];
         for (const entry of proposed.relationships) {
