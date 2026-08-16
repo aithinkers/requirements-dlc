@@ -1,5 +1,5 @@
 ---
-description: Validate installation, policy, state, and connectors.
+description: "Validate installation, policy, state, and connectors."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

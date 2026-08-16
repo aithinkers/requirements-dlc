@@ -1,5 +1,5 @@
 ---
-description: Suggest, review, and manage components.
+description: "Suggest, review, and manage components."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

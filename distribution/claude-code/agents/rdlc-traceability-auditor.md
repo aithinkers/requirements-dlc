@@ -1,6 +1,6 @@
 ---
 name: rdlc-traceability-auditor
-description: Audit the trace graph and coverage.
+description: "Audit the trace graph and coverage."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

@@ -1,6 +1,6 @@
 ---
 name: rdlc-setup-connector
-description: Walk through configuring a tracker connector (Jira or Azure DevOps): fields, estimation, components, and template bindings.
+description: "Walk through configuring a tracker connector (Jira or Azure DevOps): fields, estimation, components, and template bindings."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->
@@ -36,7 +36,7 @@ CMMI, Basic, or inherited — §32 requires discovery, never assumption).
 ### 2. Fields
 
 Discover before asking (§20.1). If credentials are available, prefer live
-discovery — Jira: `GET /rest/api/3/issue/createmeta?projectKeys=<KEY>&expand=projects.issuetypes.fields`;
+discovery — Jira: `GET /rest/api/3/issue/createmeta/{projectKey}/issuetypes` then `GET /rest/api/3/issue/createmeta/{projectKey}/issuetypes/{issueTypeId}` (paginated; the old single-call createmeta form is removed from Jira Cloud);
 Azure DevOps: `GET https://dev.azure.com/{org}/{project}/_apis/wit/fields?api-version=7.1`.
 Otherwise ask the user to paste field lists, and offer the well-known defaults:
 
@@ -45,7 +45,7 @@ Otherwise ask the user to paste field lists, and offer the well-known defaults:
 | Title | `summary` | `System.Title` |
 | Description | `description` | `System.Description` |
 | State | `status` | `System.State` |
-| Story points | `customfield_10016` (varies — verify!) | `Microsoft.VSTS.Scheduling.StoryPoints` (Agile) / `Microsoft.VSTS.Scheduling.Effort` (Scrum) |
+| Story points | `customfield_10016` (varies — verify!) | `Microsoft.VSTS.Scheduling.StoryPoints` (Agile) / `Microsoft.VSTS.Scheduling.Effort` (Scrum) / `Microsoft.VSTS.Scheduling.Size` (CMMI) |
 | Components | `components` | `System.AreaPath` |
 | Acceptance criteria | custom field (varies) | `Microsoft.VSTS.Common.AcceptanceCriteria` |
 

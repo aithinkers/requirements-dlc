@@ -1,5 +1,5 @@
 ---
-description: Record minimally structured user input or source material.
+description: "Record minimally structured user input or source material."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

@@ -37,7 +37,7 @@ try {
 
 function render(command) {
   return `---
-description: ${command.purpose}
+description: ${JSON.stringify(command.purpose)}
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->
@@ -50,7 +50,7 @@ ${commandBody(command)}`;
 function renderAgent(role) {
   return `---
 name: rdlc-${role.id}
-description: ${role.description}
+description: ${JSON.stringify(role.description)}
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->
@@ -138,7 +138,7 @@ expected.set(join("codex", "AGENTS.md"), HOST_OVERVIEW("Codex CLI"));
 for (const command of core.commands) {
   expected.set(
     join("codex", ".codex", "prompts", `rdlc-${command.verb}.md`),
-    `---\ndescription: ${command.purpose}\n---\n\n<!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->\n\n# rdlc-${command.verb}\n\n${commandBody(command)}`
+    `---\ndescription: ${JSON.stringify(command.purpose)}\n---\n\n<!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->\n\n# rdlc-${command.verb}\n\n${commandBody(command)}`
   );
 }
 for (const role of roleCore.roles) {
@@ -159,7 +159,7 @@ for (const host of ["kiro", "kiro-ide"]) {
   for (const command of core.commands) {
     expected.set(
       join(host, ".kiro", "skills", `rdlc-${command.verb}`, "SKILL.md"),
-      `---\nname: rdlc-${command.verb}\ndescription: ${command.purpose}\n---\n\n<!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->\n\n# rdlc-${command.verb} (${label})\n\n${commandBody(command)}`
+      `---\nname: rdlc-${command.verb}\ndescription: ${JSON.stringify(command.purpose)}\n---\n\n<!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->\n\n# rdlc-${command.verb} (${label})\n\n${commandBody(command)}`
     );
   }
   for (const role of roleCore.roles) {

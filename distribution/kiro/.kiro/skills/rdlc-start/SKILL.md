@@ -1,6 +1,6 @@
 ---
 name: rdlc-start
-description: Start or resume an engagement.
+description: "Start or resume an engagement."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

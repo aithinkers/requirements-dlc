@@ -1,6 +1,6 @@
 ---
 name: rdlc-product-owner
-description: Own priorities, scope decisions, and business outcomes.
+description: "Own priorities, scope decisions, and business outcomes."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

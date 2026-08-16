@@ -1,5 +1,5 @@
 ---
-description: Classify captures and determine disposition.
+description: "Classify captures and determine disposition."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

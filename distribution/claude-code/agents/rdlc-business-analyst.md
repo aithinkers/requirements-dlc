@@ -1,6 +1,6 @@
 ---
 name: rdlc-business-analyst
-description: Elicit, capture, and draft traceable requirements.
+description: "Elicit, capture, and draft traceable requirements."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

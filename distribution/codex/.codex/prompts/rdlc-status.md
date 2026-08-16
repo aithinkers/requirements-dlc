@@ -1,5 +1,5 @@
 ---
-description: Show read-only state, gates, findings, and next action.
+description: "Show read-only state, gates, findings, and next action."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

@@ -1,5 +1,5 @@
 ---
-description: Record a permitted stakeholder decision.
+description: "Record a permitted stakeholder decision."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

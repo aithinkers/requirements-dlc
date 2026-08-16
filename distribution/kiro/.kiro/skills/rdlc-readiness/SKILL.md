@@ -1,6 +1,6 @@
 ---
 name: rdlc-readiness
-description: Build the readiness package and approval plan.
+description: "Build the readiness package and approval plan."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

@@ -1,6 +1,6 @@
 ---
 name: rdlc-requirements-reviewer
-description: Run deterministic and semantic quality review.
+description: "Run deterministic and semantic quality review."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

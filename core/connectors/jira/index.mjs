@@ -71,19 +71,24 @@ export class JiraConnector {
     return response;
   }
 
-  /** discover-schema: live project issue types, fields, and hierarchy (§20.1, §29). */
+  /**
+   * discover-schema: live project issue types and their fields (§20.1, §29)
+   * via the current paginated createmeta endpoints — the legacy single-call
+   * form was removed from Jira Cloud (Atlassian CHANGE-1304).
+   */
   async discoverSchema() {
-    const meta = await this.#request("GET", `/rest/api/3/issue/createmeta?projectKeys=${this.#mapping.projectKey}&expand=projects.issuetypes.fields`);
-    if (meta.status !== 200) throw new ConnectorError("schema discovery failed", "provider-capability-unavailable");
-    const project = meta.body.projects?.[0];
-    if (!project) throw new ConnectorError(`project not visible: ${this.#mapping.projectKey}`, "permission-denied");
-    return {
-      project: project.key,
-      issue_types: (project.issuetypes ?? []).map((type) => ({
+    const types = await this.#request("GET", `/rest/api/3/issue/createmeta/${this.#mapping.projectKey}/issuetypes`);
+    if (types.status === 404) throw new ConnectorError(`project not visible: ${this.#mapping.projectKey}`, "permission-denied");
+    if (types.status !== 200) throw new ConnectorError("schema discovery failed", "provider-capability-unavailable");
+    const issueTypes = [];
+    for (const type of types.body.issueTypes ?? types.body.values ?? []) {
+      const fields = await this.#request("GET", `/rest/api/3/issue/createmeta/${this.#mapping.projectKey}/issuetypes/${type.id}`);
+      issueTypes.push({
         id: type.id, name: type.name, subtask: Boolean(type.subtask),
-        fields: Object.keys(type.fields ?? {})
-      }))
-    };
+        fields: (fields.status === 200 ? (fields.body.fields ?? fields.body.values ?? []) : []).map((field) => field.fieldId ?? field.key)
+      });
+    }
+    return { project: this.#mapping.projectKey, issue_types: issueTypes };
   }
 
   /** discover-permissions: the authenticated account and its immutable id (§27.2). */

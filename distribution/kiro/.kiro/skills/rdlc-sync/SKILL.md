@@ -1,6 +1,6 @@
 ---
 name: rdlc-sync
-description: Pull, plan, preview, apply, and verify connector changes.
+description: "Pull, plan, preview, apply, and verify connector changes."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

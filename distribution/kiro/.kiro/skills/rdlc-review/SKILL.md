@@ -1,6 +1,6 @@
 ---
 name: rdlc-review
-description: Run deterministic and semantic quality checks.
+description: "Run deterministic and semantic quality checks."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

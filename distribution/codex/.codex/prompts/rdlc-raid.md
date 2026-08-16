@@ -1,5 +1,5 @@
 ---
-description: Create and review RAID+D records.
+description: "Create and review RAID+D records."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

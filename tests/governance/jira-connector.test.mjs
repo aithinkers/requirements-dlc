@@ -32,7 +32,10 @@ const emptySearch = () => get(`/rest/api/3/search?jql=${encodeURIComponent("proj
 
 test("FEAT-010: schema and permission discovery read the synthetic company-managed project", async () => {
   const jira = connector([
-    get("/rest/api/3/issue/createmeta?projectKeys=COM&expand=projects.issuetypes.fields", fixture.createmeta),
+    get("/rest/api/3/issue/createmeta/COM/issuetypes", fixture.createmeta_issuetypes),
+    get("/rest/api/3/issue/createmeta/COM/issuetypes/10001", fixture.createmeta_fields["10001"]),
+    get("/rest/api/3/issue/createmeta/COM/issuetypes/10002", fixture.createmeta_fields["10002"]),
+    get("/rest/api/3/issue/createmeta/COM/issuetypes/10003", fixture.createmeta_fields["10003"]),
     get("/rest/api/3/myself", fixture.myself)
   ]);
   const schema = await jira.discoverSchema();

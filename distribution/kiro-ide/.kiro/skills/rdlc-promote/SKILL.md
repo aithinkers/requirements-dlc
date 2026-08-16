@@ -1,6 +1,6 @@
 ---
 name: rdlc-promote
-description: Run promotion review and move accepted capture or working content into shared draft.
+description: "Run promotion review and move accepted capture or working content into shared draft."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

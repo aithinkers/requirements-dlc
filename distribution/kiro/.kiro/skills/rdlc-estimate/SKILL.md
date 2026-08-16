@@ -1,6 +1,6 @@
 ---
 name: rdlc-estimate
-description: Configure, suggest, and confirm estimates.
+description: "Configure, suggest, and confirm estimates."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

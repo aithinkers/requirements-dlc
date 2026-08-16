@@ -23,7 +23,7 @@ codes: `0` success or up-to-date, `1` drift found or setup error, `2`
 completed but user-modified files were protected. It
 installs:
 
-- `.claude/commands/` and `.claude/agents/` — the 26 `/rdlc-*` commands and
+- `.claude/commands/` and `.claude/agents/` — the 27 `/rdlc-*` commands and
   ten §38 role agents, placed where Claude Code auto-discovers them
   (generated from the authored core and byte-exact drift-protected)
 - `requirements-project.yaml` — a §47-defaults project manifest

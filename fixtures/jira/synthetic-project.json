@@ -1,39 +1,5 @@
 {
   "description": "Recorded sanitized fixtures for a synthetic Jira Cloud company-managed project COM (\u00a744.4). No production data.",
-  "createmeta": {
-    "projects": [
-      {
-        "key": "COM",
-        "issuetypes": [
-          {
-            "id": "10001",
-            "name": "Story",
-            "subtask": false,
-            "fields": {
-              "summary": {},
-              "description": {}
-            }
-          },
-          {
-            "id": "10002",
-            "name": "Task",
-            "subtask": false,
-            "fields": {
-              "summary": {}
-            }
-          },
-          {
-            "id": "10003",
-            "name": "Readiness Review",
-            "subtask": false,
-            "fields": {
-              "summary": {}
-            }
-          }
-        ]
-      }
-    ]
-  },
   "myself": {
     "accountId": "acc-alex-immutable",
     "displayName": "Alex Morgan",
@@ -48,6 +14,51 @@
         "name": "To Do"
       },
       "updated": "2026-08-15T18:00:00.000+0000"
+    }
+  },
+  "createmeta_issuetypes": {
+    "issueTypes": [
+      {
+        "id": "10001",
+        "name": "Story",
+        "subtask": false
+      },
+      {
+        "id": "10002",
+        "name": "Task",
+        "subtask": false
+      },
+      {
+        "id": "10003",
+        "name": "Readiness Review",
+        "subtask": false
+      }
+    ]
+  },
+  "createmeta_fields": {
+    "10001": {
+      "fields": [
+        {
+          "fieldId": "summary"
+        },
+        {
+          "fieldId": "description"
+        }
+      ]
+    },
+    "10002": {
+      "fields": [
+        {
+          "fieldId": "summary"
+        }
+      ]
+    },
+    "10003": {
+      "fields": [
+        {
+          "fieldId": "summary"
+        }
+      ]
     }
   }
 }
