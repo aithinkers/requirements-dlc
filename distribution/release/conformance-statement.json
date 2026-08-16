@@ -3,16 +3,14 @@
   "specification": "rdlc",
   "specification_version": "0.2.0",
   "implementation": "requirements-dlc reference distribution",
-  "implementation_version": "0.0.1",
-  "release_candidate": false,
+  "implementation_version": "0.1.0",
+  "release_candidate": true,
   "modules": [
     "Core",
+    "Planning",
     "Governed-Basic"
   ],
-  "partial_modules": {
-    "Planning": "dependency graph, cycle detection, coverage, and collision review are implemented; planning-hierarchy templates, estimation profiles (\u00a722), RAID+D records (\u00a723), and delivery waves are outstanding",
-    "Core": "capture, promotion, trace, lifecycle, identity, hashing, intake, state, and resume are implemented; elicitation prompt packs (\u00a718), component registry lifecycle (\u00a719), and comment review (\u00a726) are outstanding"
-  },
+  "partial_modules": {},
   "connectors": [
     "Connected:Jira-Cloud-Company-Managed"
   ],
@@ -21,11 +19,10 @@
     "Harness:Claude-Code"
   ],
   "exceptions": [
-    "Planning module is partial (see partial_modules)",
-    "semantic review, duplicate ranking, and test generation (Verification module) are not claimed",
-    "\u00a744.3 standing self-review fixture pending import of the frozen 0.1 specification (ADR-001 item 14)",
-    "the \u00a746 definition of done requires a tagged build with a published test report; this statement precedes that tag",
-    "release flip, tagged-build evidence, and remaining \u00a746 steps tracked as REL-002 (issue #28)"
+    "Verification module (test generation), Knowledge-Grounded, Governed-Regulated, Portfolio, webhooks, and Confluence API profiles are excluded from release 0.1 by \u00a745.1",
+    "connector capability subset declared in core/connectors/jira CAPABILITIES (attachments, native approvals, estimation fields, history retention, ADF read-back normalization deferred)",
+    "\u00a713 relationship-record field breadth follows the \u00a712.3 verbatim example pending the erratum adjudication (issue #2 follow-up item 16)",
+    "semantic quality claims are published separately per \u00a744.2 and are not part of this deterministic conformance claim"
   ],
   "test_report": "npm test from a clean checkout; scale benchmark via node scripts/run-scale-benchmark.mjs",
   "scale_benchmark": {
@@ -35,5 +32,9 @@
       "incremental_p95_ms": 2000
     },
     "reference_environment": "GitHub-hosted ubuntu-latest runner class (ADR-001 item 11); per-run environment recorded in the benchmark report"
+  },
+  "definition_of_done": {
+    "scenario": "tests/governance/release-scenario.test.mjs (\u00a746 steps 1-13 on the synthetic project; migration fixture \u00a744.1 item 16 and self-review fixture \u00a744.3-as-amended in tests/governance/modules.test.mjs)",
+    "tagged_build": "v0.1.0 \u2014 tag created from the merge commit of the REL-002 pull request; its CI run on main is the published test report"
   }
 }

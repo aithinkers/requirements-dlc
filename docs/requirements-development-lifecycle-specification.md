@@ -3073,9 +3073,11 @@ labels where a task has legitimate judgment rather than one exact answer.
 
 ### 44.3 Standing self-review regression fixture
 
-The repository SHALL retain the frozen 0.1 specification, its critical-review
-findings, the adjudicated disposition of each finding, and this 0.2 revision as
-a standing self-review fixture. The evaluation SHALL test whether a reviewer
+The repository SHALL retain its earliest available frozen specification
+baseline, the critical-review findings adjudicated against it, and each
+finding's disposition as a standing self-review fixture. Where no pre-0.2
+draft survives in the repository's history, the fixture anchors at the 0.2
+baseline and its adjudicated review record. The evaluation SHALL test whether a reviewer
 detects the known scope, terminology, hashing, identity, lifecycle, integrity,
 concurrency, synchronization, privacy, scale, and evaluation defects without
 requiring identical prose. New accepted specification defects SHALL be added

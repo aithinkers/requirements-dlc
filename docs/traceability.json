@@ -273,7 +273,7 @@
         "§46",
         "§7.10"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence": {
         "implementation": [
           "scripts/scale-fixture.mjs",
@@ -300,10 +300,25 @@
         "§45.1",
         "§46"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/lib/templates.mjs",
+          "core/lib/elicitation.mjs",
+          "core/lib/components.mjs",
+          "core/lib/estimation.mjs",
+          "core/lib/raid.mjs",
+          "core/lib/comments.mjs",
+          "core/lib/planning.mjs",
+          "scripts/migrate-legacy.mjs",
+          "fixtures/migration/legacy-project.json",
+          "fixtures/self-review/findings.json",
+          "distribution/release/conformance-statement.json"
+        ],
+        "tests": [
+          "tests/governance/modules.test.mjs",
+          "tests/governance/release-scenario.test.mjs"
+        ]
       }
     },
     {

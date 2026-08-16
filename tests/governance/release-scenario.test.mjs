@@ -2,14 +2,12 @@
  * REL-001 — the §46 definition-of-done scenario, executed end to end from a
  * clean checkout over the implemented release-0.1 slices.
  *
- * Deferred and therefore NOT exercised here: §46 step 3 guided elicitation
- * (§18), step 5 component/RAID/estimate proposals (§19, §22, §23), step 14
- * migration and §44.3 self-review fixtures, template resolution (step 7 feeds
- * readinessCheck templatesPass:true), full company-setup discovery beyond
- * issue types and immutable accounts (step 4), sync-cursor storage assertions
- * (step 10), and everything §45.1 excludes (K-DLC, test generation, regulated
- * signatures, webhooks, Confluence API profiles). The conformance statement's
- * exceptions list is the authoritative deferral record.
+ * Remaining deferrals, all excluded from release 0.1 by §45.1: K-DLC
+ * integration, test generation (Verification module), regulated signatures,
+ * webhooks, and Confluence API profiles. Company-setup discovery covers issue
+ * types, fields, and immutable accounts; workflow/approval-mapping discovery
+ * depth is declared in the connector CAPABILITIES. The conformance
+ * statement's exceptions list remains the authoritative record.
  */
 
 import assert from "node:assert/strict";
@@ -31,6 +29,12 @@ import { intake } from "../../core/lib/intake/index.mjs";
 import { contentHash } from "../../core/lib/canonical.mjs";
 import { createRevision, isMaterialChange, transitionGovernance } from "../../core/lib/lifecycle.mjs";
 import { createCapture, promote, promotionReview, triage } from "../../core/lib/promotion.mjs";
+import { suggestComponent } from "../../core/lib/components.mjs";
+import { BUILT_IN_SCALES, createProfile, suggestEstimate } from "../../core/lib/estimation.mjs";
+import { createQuestion, answerFromSources } from "../../core/lib/elicitation.mjs";
+import { computeWaves } from "../../core/lib/planning.mjs";
+import { createRaidRecord } from "../../core/lib/raid.mjs";
+import { resolveTemplate, validateAgainstTemplate } from "../../core/lib/templates.mjs";
 
 const H = (c) => "sha256:" + c.repeat(64);
 const now = "2026-08-15T23:30:00.000Z";
@@ -49,7 +53,18 @@ test("REL-001: the §46 scenario runs end to end on the implemented slices", asy
   let state = createEngagement({ project: "checkout", space: "commerce", scope: "standard", host: "claude-code", session: "e2e", actor: alexId, at: now });
   await checkpoint(state, directory, { at: now });
 
-  /* 3. Capture -> triage -> promoted traceable requirement. */
+  /* 3. Guided elicitation: sources answer first; open questions persist. */
+  const questions = [
+    createQuestion({ text: "What is the retention period?", reason: "bounds expiry", affectedArtifacts: [] }),
+    createQuestion({ text: "Which teams approve?", reason: "readiness routing", affectedArtifacts: [] })
+  ];
+  const elicited = answerFromSources(questions, {
+    [questions[0].id]: { answer: "the configured retention period", evidence: [`external://file/scope.md#${evidence.fragments[0].structural_path}`] }
+  });
+  assert.equal(elicited[0].answer_status, "answered-from-source");
+  assert.equal(elicited[1].answer_status, "open", "unanswered questions persist instead of invented answers");
+
+  /* 3b. Capture -> triage -> promoted traceable requirement. */
   const capture = createCapture({ text: evidence.fragments[0].text, provenance: { project: "checkout", sources: ["external://file/scope.md"] }, actor: alexId, at: now });
   const { artifact: triaged } = triage(capture, { type: "functional-requirement" }, context(alexId));
   const { artifact: working } = transitionGovernance(triaged, "working", context(alexId));
@@ -74,6 +89,24 @@ test("REL-001: the §46 scenario runs end to end on the implemented slices", asy
   assert.ok(schema.issue_types.some((type) => type.name === "Readiness Review"));
   assert.equal(account.account_id, "acc-alex-immutable");
   assert.ok(CAPABILITIES.deferred.length > 0, "proposals and deferrals are declared, not silently claimed");
+
+  /* 5. Proposals stay proposals: component, estimate, RAID, and waves. */
+  const componentProposal = suggestComponent({
+    name: "Cart Persistence", componentClass: "application-service", responsibility: "Durable carts",
+    evidence: [`external://file/scope.md#${evidence.fragments[0].structural_path}`],
+    causedBy: [promoted.artifact.id], confidence: "medium"
+  });
+  assert.equal(componentProposal.lifecycle_state, "suggested", "components are candidates, not accepted truth");
+  const profile = createProfile({ id: "team-points", scheme: "story-points", allowedValues: BUILT_IN_SCALES.fibonacci, meaning: "effort", confirmers: [alexId] });
+  const estimateProposal = suggestEstimate(profile, { artifact: promoted.artifact.id, value: 5, method: "reference", rationale: "similar scope", at: now });
+  assert.equal(estimateProposal.status, "suggested");
+  const riskProposal = createRaidRecord({
+    type: "risk", statement: "Provider drift during rollout", owner: alexId, at: now,
+    probability: "low", impact: "medium", exposure_method: "matrix", mitigation: "read-back verification"
+  });
+  assert.equal(riskProposal.status, "open");
+  const waves = computeWaves(["persist", "expire"], [{ source: "expire", target: "persist" }]);
+  assert.deepEqual(waves, [["persist"], ["expire"]]);
 
   /* 6. Two BAs overlap; claims reveal it; the lease serializes the mutation. */
   const claims = [
@@ -123,8 +156,12 @@ test("REL-001: the §46 scenario runs end to end on the implemented slices", asy
     policyVersions: ["approval/v1"],
     requiredApprovers: [{ principal: alex.id, role: "product-owner" }]
   });
+  const template = resolveTemplate([
+    { level: "organization", version: "org/v1", fields: { statement: { required: true, locked: true }, title: { required: true } } }
+  ]);
+  const templateFailures = validateAgainstTemplate(promoted.artifact, template);
   const ready = readinessCheck({
-    templatesPass: true, evidenceLinks: ["external://file/scope.md"],
+    templatesPass: templateFailures.length === 0, evidenceLinks: ["external://file/scope.md"],
     approverSet: [alex.id], registry, reproduciblePackage: true
   });
   assert.equal(ready.ready, true);
@@ -156,10 +193,22 @@ test("REL-001: the §46 scenario runs end to end on the implemented slices", asy
   assert.match(applied.receipts[0].readback_hash, /^sha256:/);
 
   state = recordApplyResults(state, changeset.id, applied.results, { actor: alex.id, at: now });
+  // Step 10 — the synchronization cursor is durable engagement state (§29.6, §34.1).
+  const pollConnector = new JiraConnector({
+    transport: recordedTransport([
+      { method: "GET", path: `/rest/api/3/search?jql=${encodeURIComponent('project = COM AND updated >= "2026-08-15 00:00" ORDER BY updated ASC')}&startAt=0`, response: { status: 200, body: { issues: [created], total: 1 } } }
+    ]),
+    mapping, writeMode: "read-only", now: () => now
+  });
+  const polled = await pollConnector.poll({ watermark: "2026-08-15 00:00", startAt: 0, seen: [] }, {
+    persist: async ({ cursor }) => { state = { ...state, sync_cursors: { ...state.sync_cursors, "delivery-jira": cursor } }; }
+  });
+  assert.equal(polled.items.length, 1);
   await checkpoint(state, directory, { at: now });
   const resumed = await loadEngagement(directory);
   assert.equal(resumed.verified, true);
   assert.ok(resumed.state.verified_operations[changeset.id]["op-001"], "resume never duplicates verified writes");
+  assert.equal(resumed.state.sync_cursors["delivery-jira"].watermark, "2026-08-15 23:31", "the cursor survives in durable state");
 
   // Uncertain retry reconciles by idempotency identity instead of duplicating.
   const reconcile = new JiraConnector({
@@ -202,6 +251,9 @@ test("REL-001: the conformance statement claims exactly the implemented 0.1 prof
   for (const module_ of ["Core", "Governed-Basic"]) assert.ok(statement.modules.includes(module_), module_);
   assert.ok(statement.connectors.includes("Connected:Jira-Cloud-Company-Managed"));
   assert.ok(statement.harnesses.includes("Harness:Claude-Code"));
-  assert.ok(Array.isArray(statement.exceptions) && statement.exceptions.length > 0, "gaps are declared, not hidden");
-  assert.equal(statement.release_candidate, false, "no release claim before the full §46 tagged-build evidence");
+  assert.ok(Array.isArray(statement.exceptions) && statement.exceptions.length > 0, "remaining §45.1 exclusions are declared, not hidden");
+  assert.ok(statement.modules.includes("Planning"), "§45.1 requires the Planning claim in release 0.1");
+  assert.equal(statement.release_candidate, true);
+  assert.ok(statement.definition_of_done?.tagged_build, "the release claim names its tagged-build evidence");
+  assert.deepEqual(statement.partial_modules, {}, "no module is claimed while partial");
 });
