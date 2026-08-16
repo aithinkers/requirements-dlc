@@ -13,7 +13,7 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 
 import YAML from "yaml";
 
@@ -101,6 +101,7 @@ export async function loadConnectorConfig(projectRoot, { catalogTypes = null, co
   }
   const declared = manifest?.connectors ?? [];
   const results = [];
+  const seenIds = new Set();
   for (const connector of declared) {
     for (const field of ["id", "provider", "mapping", "write_mode"]) {
       if (!connector[field]) throw new ConnectorConfigError(`connector declaration requires ${field} (§11.1)`);
@@ -108,11 +109,26 @@ export async function loadConnectorConfig(projectRoot, { catalogTypes = null, co
     if (!WRITE_MODES.includes(connector.write_mode)) {
       throw new ConnectorConfigError(`unknown write mode for ${connector.id}: ${connector.write_mode} (§29.2)`);
     }
+    if (seenIds.has(connector.id)) throw new ConnectorConfigError(`duplicate connector id: ${connector.id}`);
+    seenIds.add(connector.id);
+    // Mapping paths are confined to the project root (§7.2 fail closed);
+    // foreign file content is never echoed into errors.
+    const mappingPath = resolve(projectRoot, connector.mapping);
+    const confined = relative(resolve(projectRoot), mappingPath);
+    if (isAbsolute(connector.mapping) || confined.startsWith("..") || isAbsolute(confined)) {
+      throw new ConnectorConfigError(`mapping path for ${connector.id} escapes the project root: ${connector.mapping}`);
+    }
+    let raw;
+    try {
+      raw = await readFile(mappingPath, "utf8");
+    } catch {
+      throw new ConnectorConfigError(`mapping file for ${connector.id} cannot be read: ${connector.mapping}`);
+    }
     let mapping;
     try {
-      mapping = YAML.parse(await readFile(join(projectRoot, connector.mapping), "utf8"));
-    } catch (error) {
-      throw new ConnectorConfigError(`mapping file for ${connector.id} cannot be read: ${connector.mapping}: ${error.message}`);
+      mapping = YAML.parse(raw);
+    } catch {
+      throw new ConnectorConfigError(`mapping file for ${connector.id} is not valid YAML: ${connector.mapping}`);
     }
     const failures = validateMapping(mapping, { catalogTypes });
     if (failures.length > 0) {
@@ -127,8 +143,10 @@ export async function loadConnectorConfig(projectRoot, { catalogTypes = null, co
 
     // Ready-to-use estimation profile (§22): confirmation stays with the
     // configured confirmers; AI values remain suggestions.
-    const estimation = mapping.estimation
-      ? {
+    let estimation = null;
+    if (mapping.estimation) {
+      try {
+        estimation = {
           provider_field: mapping.estimation.provider_field,
           profile: createProfile({
             id: mapping.estimation.profile,
@@ -136,10 +154,13 @@ export async function loadConnectorConfig(projectRoot, { catalogTypes = null, co
             allowedValues: mapping.estimation.allowed_values ?? null,
             meaning: mapping.estimation.meaning ?? "as configured by the team (§22.2 item 3)",
             aiSuggestionsAllowed: mapping.estimation.allow_ai_suggestions ?? true,
-            confirmers: mapping.estimation.confirmers ?? confirmers
+            confirmers: (mapping.estimation.confirmers?.length ? mapping.estimation.confirmers : confirmers)
           })
-        }
-      : null;
+        };
+      } catch (error) {
+        throw new ConnectorConfigError(`connector ${connector.id} (${connector.mapping}): estimation configuration invalid: ${error.message}`);
+      }
+    }
 
     // Per-artifact-type template mappings for validateProviderItem/drift (§20.1).
     const templateMappings = Object.fromEntries(

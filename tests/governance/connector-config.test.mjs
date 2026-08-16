@@ -106,3 +106,25 @@ test("FEAT-017: setup scaffolds the example mapping and a project without connec
   const configs = await loadConnectorConfig(target);
   assert.deepEqual(configs, [], "empty connectors list is valid");
 });
+
+test("FEAT-017: mapping paths are confined to the project root; errors carry config context (review MEDIUMs)", async () => {
+  const escape = await projectWith(GOOD_MAPPING, `connectors:\n  - id: x\n    provider: jira\n    mapping: ../../../../etc/hosts\n    write_mode: propose\n`);
+  await assert.rejects(loadConnectorConfig(escape), /escapes the project root/);
+  const absolute = await projectWith(GOOD_MAPPING, `connectors:\n  - id: x\n    provider: jira\n    mapping: /etc/hosts\n    write_mode: propose\n`);
+  await assert.rejects(loadConnectorConfig(absolute), /escapes the project root/);
+
+  // No confirmers anywhere: a config-scoped error naming connector and file.
+  const noConfirmers = await projectWith(GOOD_MAPPING);
+  await assert.rejects(
+    loadConnectorConfig(noConfirmers, { catalogTypes: catalog.types() }),
+    (error) => error instanceof ConnectorConfigError && /delivery-jira/.test(error.message) && /jira-com.yaml/.test(error.message) && /confirms estimates/.test(error.message)
+  );
+
+  // Duplicate connector ids fail closed.
+  const duplicate = await projectWith(GOOD_MAPPING, `connectors:\n  - id: a\n    provider: jira\n    mapping: config/connectors/jira-com.yaml\n    write_mode: propose\n  - id: a\n    provider: jira\n    mapping: config/connectors/jira-com.yaml\n    write_mode: propose\n`);
+  await assert.rejects(loadConnectorConfig(duplicate, { catalogTypes: catalog.types(), confirmers: [confirmer] }), /duplicate connector id/);
+
+  // Unparseable YAML is reported as such, without echoing content.
+  const badYaml = await projectWith("{{{{not yaml");
+  await assert.rejects(loadConnectorConfig(badYaml), (error) => /not valid YAML/.test(error.message) && !/not yaml/.test(error.message));
+});
