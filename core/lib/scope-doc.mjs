@@ -21,7 +21,9 @@ export const RELEASE_ASSIGNABLE_TYPES = Object.freeze([
   "story", "feature", "epic", "capability", "initiative", "portfolio-epic"
 ]);
 
-const label = (artifact) => artifact.title ?? artifact.display_id ?? artifact.id ?? "(untitled)";
+// Labels feed rendered markdown: strip newlines so a title can never forge
+// document structure.
+const label = (artifact) => String(artifact.title ?? artifact.display_id ?? artifact.id ?? "(untitled)").replace(/[\r\n]+/g, " ");
 
 function releaseIndex(releases) {
   const byName = new Map();
@@ -48,6 +50,13 @@ export function validateReleaseAssignments(artifacts, releases) {
   for (const artifact of artifacts) {
     const assigned = artifact?.target_release;
     if (assigned === undefined || assigned === null || assigned === "") continue;
+    if (typeof assigned !== "string" && typeof assigned !== "number") {
+      findings.push({
+        rule: "RDLC-REL-004", item: label(artifact),
+        message: `"${label(artifact)}" has a malformed target_release (${Array.isArray(assigned) ? "array" : typeof assigned}) — it must be a single release name`
+      });
+      continue;
+    }
     if (!RELEASE_ASSIGNABLE_TYPES.includes(artifact.type)) {
       findings.push({
         rule: "RDLC-REL-002", item: label(artifact),
@@ -93,6 +102,9 @@ export function buildScopeDocument({ intent, stakeholders, successMeasures, arti
   if (release !== null) {
     selected = declared.get(String(release));
     if (!selected) throw new ScopeDocError(`release "${release}" is not declared`);
+    if (selected.status === "cancelled") {
+      throw new ScopeDocError(`release "${selected.name}" is cancelled — a scope document for it would be misleading`);
+    }
   }
   const invalid = validateReleaseAssignments(artifacts, releases);
   if (invalid.length > 0) {
@@ -100,17 +112,31 @@ export function buildScopeDocument({ intent, stakeholders, successMeasures, arti
   }
 
   const planning = artifacts.filter((artifact) => RELEASE_ASSIGNABLE_TYPES.includes(artifact?.type));
-  const deferredItems = new Set(deferrals.map((entry) => {
+
+  // Resolve each deferral to at most one artifact: exact id match first, then
+  // exact title. An ambiguous title is an error (§18.1: a decision must name
+  // what it decides), and a deferral that matches nothing is carried as an
+  // external deferral rather than silently swallowing an artifact.
+  const deferredArtifacts = new Set();
+  let externalDeferrals = 0;
+  for (const entry of deferrals) {
     if (entry?.decision !== "deferred" || !entry.item || !entry.reason) {
       throw new ScopeDocError(`a deferral needs item, decision: "deferred", and reason — got ${JSON.stringify(entry)}`);
     }
-    return String(entry.item);
-  }));
+    const key = String(entry.item);
+    const byId = planning.filter((artifact) => String(artifact.id ?? "") === key && artifact.id != null);
+    const matches = byId.length > 0 ? byId : planning.filter((artifact) => label(artifact) === key);
+    if (matches.length > 1) {
+      throw new ScopeDocError(`deferral "${key}" matches ${matches.length} planning items — defer by unique id so the decision is unambiguous`);
+    }
+    if (matches.length === 1) deferredArtifacts.add(matches[0]);
+    else externalDeferrals += 1;
+  }
 
   const inScope = [], outOfScope = [], openQuestions = [];
   for (const artifact of planning) {
     const name = label(artifact);
-    if (deferredItems.has(name) || deferredItems.has(String(artifact.id ?? ""))) continue; // rendered from deferrals below
+    if (deferredArtifacts.has(artifact)) continue; // rendered from deferrals below
     const assigned = artifact.target_release == null || artifact.target_release === "" ? null : String(artifact.target_release);
     if (selected === null) {
       inScope.push({ item: name, type: artifact.type, release: assigned });
@@ -136,7 +162,16 @@ export function buildScopeDocument({ intent, stakeholders, successMeasures, arti
     success_measures: successMeasures,
     ...(selected ? { release: selected.name } : {}),
     open_questions: openQuestions,
-    coverage: { planning_items: planning.length, in_scope: inScope.length, out_of_scope: outOfScope.length, unassigned: openQuestions.length }
+    // Arithmetic reconciles: in_scope + out_of_scope + unassigned equals
+    // planning_items; deferrals naming items outside the artifact set are
+    // counted separately, never against the planning total.
+    coverage: {
+      planning_items: planning.length,
+      in_scope: inScope.length,
+      out_of_scope: outOfScope.length - externalDeferrals,
+      unassigned: openQuestions.length,
+      external_deferrals: externalDeferrals
+    }
   };
 }
 
@@ -156,6 +191,9 @@ export function renderScopeDocumentMarkdown(document) {
   list("Success measures", Array.isArray(document.success_measures) ? document.success_measures : [document.success_measures], String);
   list("Open questions", document.open_questions, String);
   const coverage = document.coverage;
-  lines.push("## Coverage", "", `${coverage.in_scope} in scope, ${coverage.out_of_scope} out of scope, ${coverage.unassigned} awaiting a decision (of ${coverage.planning_items} planning items).`, "");
+  const external = coverage.external_deferrals > 0
+    ? ` ${coverage.external_deferrals} deferral${coverage.external_deferrals === 1 ? "" : "s"} reference${coverage.external_deferrals === 1 ? "s" : ""} items outside this document's planning set.`
+    : "";
+  lines.push("## Coverage", "", `${coverage.in_scope} in scope, ${coverage.out_of_scope} out of scope, ${coverage.unassigned} awaiting a decision (of ${coverage.planning_items} planning items).${external}`, "");
   return lines.join("\n");
 }

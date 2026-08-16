@@ -67,7 +67,9 @@ test("FEAT-021: release-scoped document assembles from recorded decisions only",
   assert.deepEqual(document.out_of_scope.map((entry) => entry.item), ["Loyalty points", "Gift receipts"]);
   assert.match(document.out_of_scope[0].reason, /2026\.3/);
   assert.deepEqual(document.open_questions, ['Is "Gift wrap" (story) in release "2026.2"? It has no release assignment yet.']);
-  assert.deepEqual(document.coverage, { planning_items: 4, in_scope: 2, out_of_scope: 2, unassigned: 1 });
+  assert.deepEqual(document.coverage, { planning_items: 4, in_scope: 2, out_of_scope: 1, unassigned: 1, external_deferrals: 1 });
+  const { coverage } = document;
+  assert.equal(coverage.in_scope + coverage.out_of_scope + coverage.unassigned, coverage.planning_items, "coverage arithmetic reconciles");
 
   // The document satisfies its own template.
   return loadCatalog().then((catalog) => assert.deepEqual(catalog.validateArtifact(document), []));
@@ -91,6 +93,35 @@ test("FEAT-021: unscoped documents include everything; guessing is impossible", 
   assert.throws(
     () => buildScopeDocument({ intent: "i", stakeholders: ["s"], successMeasures: ["m"], deferrals: [{ item: "x", decision: "dropped" }] }),
     ScopeDocError
+  );
+});
+
+test("FEAT-021: title collisions cannot silently swallow an assigned item (review round 2)", () => {
+  const twins = [
+    { id: "A", type: "story", title: "Login", target_release: "2026.2" },
+    { id: "B", type: "story", title: "Login" }
+  ];
+  // Ambiguous title deferral is an error, not a guess.
+  assert.throws(
+    () => buildScopeDocument({ intent: "i", stakeholders: ["s"], successMeasures: ["m"], artifacts: twins, releases, release: "2026.2", deferrals: [{ item: "Login", decision: "deferred", reason: "later" }] }),
+    /matches 2 planning items/
+  );
+  // Deferring by unique id keeps the assigned twin fully accounted for.
+  const document = buildScopeDocument({
+    intent: "i", stakeholders: ["s"], successMeasures: ["m"], artifacts: twins, releases, release: "2026.2",
+    deferrals: [{ item: "B", decision: "deferred", reason: "later" }]
+  });
+  assert.deepEqual(document.in_scope.map((entry) => entry.item), ["Login"]);
+  assert.deepEqual(document.coverage, { planning_items: 2, in_scope: 1, out_of_scope: 1, unassigned: 0, external_deferrals: 0 });
+});
+
+test("FEAT-021: malformed target_release types fail closed; cancelled releases cannot be documented", () => {
+  const findings = validateReleaseAssignments([{ type: "story", title: "x", target_release: ["2026.2"] }], releases);
+  assert.equal(findings[0].rule, "RDLC-REL-004");
+  assert.match(findings[0].message, /array/);
+  assert.throws(
+    () => buildScopeDocument({ intent: "i", stakeholders: ["s"], successMeasures: ["m"], releases, release: "old" }),
+    /cancelled/
   );
 });
 
