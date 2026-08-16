@@ -12,9 +12,9 @@
       "title": "Governance and repository bootstrap",
       "issue": 1,
       "specification_sections": [
-        "§2.3",
-        "§7.2",
-        "§44.1"
+        "\u00a72.3",
+        "\u00a77.2",
+        "\u00a744.1"
       ],
       "status": "verified",
       "evidence": {
@@ -36,13 +36,13 @@
       "title": "Adjudicate open specification decisions for 0.2.0",
       "issue": 2,
       "specification_sections": [
-        "§2.3",
-        "§2.4",
-        "§7.10",
-        "§12.5",
-        "§16.2.3",
-        "§27.2",
-        "§35.9"
+        "\u00a72.3",
+        "\u00a72.4",
+        "\u00a77.10",
+        "\u00a712.5",
+        "\u00a716.2.3",
+        "\u00a727.2",
+        "\u00a735.9"
       ],
       "status": "implemented",
       "evidence": {
@@ -59,13 +59,13 @@
       "title": "Portable v0.2 schemas and artifact envelope",
       "issue": 3,
       "specification_sections": [
-        "§11",
-        "§12.1",
-        "§12.2",
-        "§12.3",
-        "§12.4",
-        "§13",
-        "§16.1"
+        "\u00a711",
+        "\u00a712.1",
+        "\u00a712.2",
+        "\u00a712.3",
+        "\u00a712.4",
+        "\u00a713",
+        "\u00a716.1"
       ],
       "status": "verified",
       "evidence": {
@@ -91,8 +91,8 @@
       "title": "rdlc-jcs-v1 canonical serialization and hash profiles",
       "issue": 4,
       "specification_sections": [
-        "§12.5",
-        "§12.6"
+        "\u00a712.5",
+        "\u00a712.6"
       ],
       "status": "verified",
       "evidence": {
@@ -110,9 +110,9 @@
       "title": "UUIDv7 identity and display-alias allocation",
       "issue": 5,
       "specification_sections": [
-        "§12.1",
-        "§12.2",
-        "§35.9"
+        "\u00a712.1",
+        "\u00a712.2",
+        "\u00a735.9"
       ],
       "status": "verified",
       "evidence": {
@@ -129,8 +129,8 @@
       "title": "Lifecycle state machines and materiality policy",
       "issue": 6,
       "specification_sections": [
-        "§14",
-        "§27.7"
+        "\u00a714",
+        "\u00a727.7"
       ],
       "status": "verified",
       "evidence": {
@@ -147,10 +147,10 @@
       "title": "Capture, triage, promotion gate, and trace coverage",
       "issue": 7,
       "specification_sections": [
-        "§14.4",
-        "§35.3",
-        "§35.4",
-        "§13"
+        "\u00a714.4",
+        "\u00a735.3",
+        "\u00a735.4",
+        "\u00a713"
       ],
       "status": "verified",
       "evidence": {
@@ -167,10 +167,10 @@
       "title": "Bounded scope-document intake matrix",
       "issue": 8,
       "specification_sections": [
-        "§16.2",
-        "§16.2.1",
-        "§16.2.2",
-        "§16.2.3"
+        "\u00a716.2",
+        "\u00a716.2.1",
+        "\u00a716.2.2",
+        "\u00a716.2.3"
       ],
       "status": "verified",
       "evidence": {
@@ -189,7 +189,7 @@
       "title": "Multi-BA collaboration, claims, leases, and collisions",
       "issue": 9,
       "specification_sections": [
-        "§35"
+        "\u00a735"
       ],
       "status": "verified",
       "evidence": {
@@ -206,8 +206,8 @@
       "title": "Identity registry, approvals, baselines, and redaction",
       "issue": 10,
       "specification_sections": [
-        "§27",
-        "§41.1"
+        "\u00a727",
+        "\u00a741.1"
       ],
       "status": "verified",
       "evidence": {
@@ -224,10 +224,10 @@
       "title": "Jira Cloud company-managed connector",
       "issue": 11,
       "specification_sections": [
-        "§29",
-        "§30",
-        "§33",
-        "§44.4"
+        "\u00a729",
+        "\u00a730",
+        "\u00a733",
+        "\u00a744.4"
       ],
       "status": "verified",
       "evidence": {
@@ -245,10 +245,10 @@
       "title": "Claude Code harness, persistent state, and resume",
       "issue": 12,
       "specification_sections": [
-        "§34",
-        "§36",
-        "§37",
-        "§15"
+        "\u00a734",
+        "\u00a736",
+        "\u00a737",
+        "\u00a715"
       ],
       "status": "verified",
       "evidence": {
@@ -268,10 +268,10 @@
       "title": "Release 0.1 conformance suite and definition of done",
       "issue": 13,
       "specification_sections": [
-        "§44",
-        "§45.1",
-        "§46",
-        "§7.10"
+        "\u00a744",
+        "\u00a745.1",
+        "\u00a746",
+        "\u00a77.10"
       ],
       "status": "verified",
       "evidence": {
@@ -287,18 +287,18 @@
     },
     {
       "id": "REL-002",
-      "title": "Release 0.1 flip — close conformance gaps, tag, and publish evidence",
+      "title": "Release 0.1 flip \u2014 close conformance gaps, tag, and publish evidence",
       "issue": 28,
       "specification_sections": [
-        "§18",
-        "§19",
-        "§20.1",
-        "§22",
-        "§23",
-        "§26",
-        "§44.3",
-        "§45.1",
-        "§46"
+        "\u00a718",
+        "\u00a719",
+        "\u00a720.1",
+        "\u00a722",
+        "\u00a723",
+        "\u00a726",
+        "\u00a744.3",
+        "\u00a745.1",
+        "\u00a746"
       ],
       "status": "verified",
       "evidence": {
@@ -323,12 +323,12 @@
     },
     {
       "id": "FEAT-012",
-      "title": "§38 role agents and Claude Code plugin distribution",
+      "title": "\u00a738 role agents and Claude Code plugin distribution",
       "issue": 29,
       "specification_sections": [
-        "§38",
-        "§36",
-        "§7.8"
+        "\u00a738",
+        "\u00a736",
+        "\u00a77.8"
       ],
       "status": "verified",
       "evidence": {
@@ -348,9 +348,9 @@
       "title": "Setup installer, package metadata, and quick start for distribution",
       "issue": 32,
       "specification_sections": [
-        "§11",
-        "§36",
-        "§47"
+        "\u00a711",
+        "\u00a736",
+        "\u00a747"
       ],
       "status": "verified",
       "evidence": {
@@ -366,10 +366,10 @@
     },
     {
       "id": "FEAT-014",
-      "title": "Fix Claude Code discovery — .claude/commands+agents install and marketplace manifest",
+      "title": "Fix Claude Code discovery \u2014 .claude/commands+agents install and marketplace manifest",
       "issue": 34,
       "specification_sections": [
-        "§36"
+        "\u00a736"
       ],
       "status": "verified",
       "evidence": {
@@ -388,8 +388,8 @@
       "title": "Consolidate generated output under distribution/ for K-DLC layout parity",
       "issue": 36,
       "specification_sections": [
-        "§36",
-        "§2.3"
+        "\u00a736",
+        "\u00a72.3"
       ],
       "status": "implemented",
       "evidence": {
@@ -406,9 +406,9 @@
       "title": "Codex and Kiro (CLI + IDE) harness distributions",
       "issue": 38,
       "specification_sections": [
-        "§36",
-        "§36.1",
-        "§45.1"
+        "\u00a736",
+        "\u00a736.1",
+        "\u00a745.1"
       ],
       "status": "verified",
       "evidence": {
@@ -429,13 +429,13 @@
       "title": "Per-type content templates, connector field validation, external format drift",
       "issue": 40,
       "specification_sections": [
-        "§18.2",
-        "§18.3",
-        "§20.1",
-        "§20.2",
-        "§24.1",
-        "§26",
-        "§29.6"
+        "\u00a718.2",
+        "\u00a718.3",
+        "\u00a720.1",
+        "\u00a720.2",
+        "\u00a724.1",
+        "\u00a726",
+        "\u00a729.6"
       ],
       "status": "verified",
       "evidence": {
@@ -453,10 +453,10 @@
       "title": "Connector configuration format and loader",
       "issue": 42,
       "specification_sections": [
-        "§11.1",
-        "§20.1",
-        "§22.2",
-        "§29"
+        "\u00a711.1",
+        "\u00a720.1",
+        "\u00a722.2",
+        "\u00a729"
       ],
       "status": "verified",
       "evidence": {
@@ -475,12 +475,12 @@
       "title": "Guided connector-setup skill with Jira and Azure DevOps support",
       "issue": 44,
       "specification_sections": [
-        "§18.1",
-        "§20.1",
-        "§22.2",
-        "§29",
-        "§32",
-        "§36"
+        "\u00a718.1",
+        "\u00a720.1",
+        "\u00a722.2",
+        "\u00a729",
+        "\u00a732",
+        "\u00a736"
       ],
       "status": "verified",
       "evidence": {
@@ -498,15 +498,15 @@
     },
     {
       "id": "FEAT-019",
-      "title": "Deep workflow content — stage protocol, stage graph, scopes, personas, command bodies",
+      "title": "Deep workflow content \u2014 stage protocol, stage graph, scopes, personas, command bodies",
       "issue": 46,
       "specification_sections": [
-        "§15",
-        "§15.1",
-        "§18.1",
-        "§34",
-        "§36",
-        "§38"
+        "\u00a715",
+        "\u00a715.1",
+        "\u00a718.1",
+        "\u00a734",
+        "\u00a736",
+        "\u00a738"
       ],
       "status": "verified",
       "evidence": {
@@ -525,14 +525,14 @@
     },
     {
       "id": "FEAT-020",
-      "title": "Human-first runtime — sensors, session hooks, memory, stage guides, upgrade-aware install",
+      "title": "Human-first runtime \u2014 sensors, session hooks, memory, stage guides, upgrade-aware install",
       "issue": 48,
       "specification_sections": [
-        "§15",
-        "§34",
-        "§7.2",
-        "§42",
-        "§36"
+        "\u00a715",
+        "\u00a734",
+        "\u00a77.2",
+        "\u00a742",
+        "\u00a736"
       ],
       "status": "verified",
       "evidence": {
@@ -547,6 +547,32 @@
         ],
         "tests": [
           "tests/governance/human-runtime.test.mjs"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-021",
+      "title": "Release scoping and governed high-level scope documents",
+      "issue": 50,
+      "specification_sections": [
+        "18.2",
+        "20",
+        "22",
+        "26",
+        "27",
+        "29.6"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "core/lib/scope-doc.mjs",
+          "core/templates/framework.json",
+          "core/lib/connector-config.mjs",
+          "core/lib/sensors.mjs",
+          "core/commands/bodies/scope-doc.md"
+        ],
+        "tests": [
+          "tests/governance/scope-doc.test.mjs"
         ]
       }
     }

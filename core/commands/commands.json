@@ -136,6 +136,11 @@
       "verb": "setup-connector",
       "purpose": "Walk through configuring a tracker connector (Jira or Azure DevOps): fields, estimation, components, and template bindings.",
       "mutates_external": false
+    },
+    {
+      "verb": "scope-doc",
+      "purpose": "Assemble a governed high-level scope document, optionally scoped to one release.",
+      "mutates_external": false
     }
   ]
 }

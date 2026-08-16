@@ -75,6 +75,16 @@ export function validateMapping(mapping, { catalogTypes = null } = {}) {
     }
   }
 
+  if (mapping.releases) {
+    if (!mapping.releases.provider_field) failures.push("releases binding requires provider_field (e.g. Jira fixVersions, ADO System.IterationPath)");
+    else if (!fieldSet.has(mapping.releases.provider_field)) {
+      failures.push(`releases provider_field "${mapping.releases.provider_field}" is not in the mapped fields list`);
+    }
+    if (!["name", "id"].includes(mapping.releases.match_by ?? "name")) {
+      failures.push(`releases match_by must be name or id, not ${mapping.releases.match_by}`);
+    }
+  }
+
   const issueTypes = new Set();
   for (const [artifactType, binding] of Object.entries(mapping.artifact_types ?? {})) {
     if (catalogTypes && !catalogTypes.includes(artifactType)) {
@@ -194,6 +204,7 @@ export async function loadConnectorConfig(projectRoot, { catalogTypes = null, co
       connectorMapping,
       estimation,
       components: mapping.components ? { ...mapping.components } : null,
+      releases: mapping.releases ? { ...mapping.releases } : null,
       templateMappings
     });
   }
