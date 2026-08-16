@@ -1,0 +1,12 @@
+{
+  "name": "rdlc",
+  "owner": { "name": "AIThinkers", "url": "https://github.com/aithinkers" },
+  "plugins": [
+    {
+      "name": "rdlc",
+      "source": "./dist/claude-code",
+      "description": "Governed R-DLC requirements lifecycle: 26 /rdlc-* commands and 10 role agents.",
+      "version": "0.2.0"
+    }
+  ]
+}

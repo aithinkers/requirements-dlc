@@ -71,7 +71,8 @@ durable checkpoints.
 npx github:aithinkers/requirements-dlc
 ```
 
-installs the Claude Code plugin (26 `/rdlc-*` commands + 10 role agents), a
+installs the 26 `/rdlc-*` commands and 10 role agents into `.claude/commands/`
+and `.claude/agents/` (where Claude Code discovers them), plus a
 §47-defaults `requirements-project.yaml`, and the `rdlc/` engagement layout
 into your project — idempotently, without clobbering your edits. Then open
 the project in Claude Code and run `/rdlc-start`. Full walkthrough:

@@ -13,7 +13,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
@@ -35,14 +35,14 @@ function parseArguments(argv) {
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 async function listPluginFiles() {
+  // Claude Code discovers project commands in .claude/commands and agents in
+  // .claude/agents — NOT under .claude/plugins (issue #34). The plugin-shaped
+  // dist/claude-code tree remains available for `claude plugin install`.
   const base = join(packageRoot, "dist", "claude-code");
   const files = [];
-  for (const directory of ["commands", "agents", ".claude-plugin"]) {
+  for (const [directory, destination] of [["commands", join(".claude", "commands")], ["agents", join(".claude", "agents")]]) {
     for (const name of await readdir(join(base, directory))) {
-      files.push({
-        source: join(base, directory, name),
-        relative: join(".claude", "plugins", "rdlc", directory, name)
-      });
+      files.push({ source: join(base, directory, name), relative: join(destination, name) });
     }
   }
   return files;
@@ -141,6 +141,13 @@ export async function runSetup({ target, force = false, check = false, log = con
   }
 
   if (!check) {
+    // Migrate away the 0.1.1 layout Claude Code never discovered (issue #34).
+    const legacy = join(target, ".claude", "plugins", "rdlc");
+    try {
+      await stat(legacy);
+      await rm(legacy, { recursive: true });
+      results.migrated = legacy;
+    } catch { /* no legacy install */ }
     for (const directory of SCAFFOLD_DIRECTORIES) {
       const destination = join(target, directory);
       try {
@@ -158,6 +165,7 @@ export async function runSetup({ target, force = false, check = false, log = con
     log(results.drift.length === 0 ? "  up to date" : results.drift.map((entry) => `  drift: ${entry.file} (${entry.state})`).join("\n"));
   } else {
     log(`  installed: ${results.installed.length}, unchanged: ${results.skipped.length}, scaffolded: ${results.scaffolded.length}`);
+    if (results.migrated) log(`  migrated: removed undiscovered legacy install at ${results.migrated}`);
     for (const file of results.protected) {
       log(`  PROTECTED (user-modified, use --force to overwrite): ${file}`);
     }

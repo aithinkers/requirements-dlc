@@ -363,6 +363,25 @@
           "tests/governance/engagement.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-014",
+      "title": "Fix Claude Code discovery — .claude/commands+agents install and marketplace manifest",
+      "issue": 34,
+      "specification_sections": [
+        "§36"
+      ],
+      "status": "verified",
+      "evidence": {
+        "implementation": [
+          "scripts/setup.mjs",
+          ".claude-plugin/marketplace.json",
+          "docs/getting-started.md"
+        ],
+        "tests": [
+          "tests/governance/engagement.test.mjs"
+        ]
+      }
     }
   ]
 }
