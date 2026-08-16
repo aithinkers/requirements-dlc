@@ -324,3 +324,24 @@ test("FEAT-009: baselines are deeply frozen (review LOW)", () => {
   assert.throws(() => { baseline.source_locks[0].rev = 2; }, TypeError);
   assert.throws(() => { baseline.metadata.nested.x = 2; }, TypeError);
 });
+
+test("FEAT-009: role-less humans cannot assert roles; SoD finds valid matchings regardless of order", () => {
+  const registry = new IdentityRegistry();
+  const noRoles = registry.registerPrincipal({ displayName: "N", kind: "human" });
+  registry.addBinding(noRoles.id, { provider: "jira", connection: "c", accountId: "acc-n", verifiedVia: "authenticated-self-binding", verifiedBy: noRoles.id, verifiedAt: "t" });
+  const opened = pkg();
+  assert.throws(
+    () => recordDecision(registry, { provider: "jira", connection: "c", accountId: "acc-n", decision: "approve", packageHash: opened.package_hash, expectedPackageHash: opened.package_hash, role: "compliance", authenticationContext: "ctx", at: "t" }),
+    /does not hold role/
+  );
+  // P1 holds A+B, P2 holds only B: role order [B, A] must still find the matching.
+  const m = new IdentityRegistry();
+  const p1 = m.registerPrincipal({ displayName: "P1", kind: "human", roles: ["a", "b"] });
+  const p2 = m.registerPrincipal({ displayName: "P2", kind: "human", roles: ["b"] });
+  m.addBinding(p1.id, { provider: "jira", connection: "c", accountId: "acc-p1", verifiedVia: "authenticated-self-binding", verifiedBy: p1.id, verifiedAt: "t" });
+  m.addBinding(p2.id, { provider: "jira", connection: "c", accountId: "acc-p2", verifiedVia: "authenticated-self-binding", verifiedBy: p2.id, verifiedAt: "t" });
+  const mk = (acc, role) => recordDecision(m, { provider: "jira", connection: "c", accountId: acc, decision: "approve", packageHash: opened.package_hash, expectedPackageHash: opened.package_hash, role, authenticationContext: "ctx", at: "t" });
+  const decisions = [mk("acc-p1", "a"), mk("acc-p1", "b"), mk("acc-p2", "b")];
+  const result = evaluatePolicy({ kind: "one-per-role", roles: ["b", "a"], separationOfDuties: true }, decisions, { packageHash: opened.package_hash, registry: m });
+  assert.equal(result.satisfied, true, "backtracking finds p2->b, p1->a");
+});

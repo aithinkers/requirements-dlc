@@ -162,7 +162,7 @@ export function recordDecision(registry, {
   }
   const { principal, binding } = registry.resolveAccount({ provider, connection, accountId });
   if (principal.status !== "active") throw new ApprovalError(`principal is not active: ${principal.id}`);
-  if (role && principal.kind === "human" && principal.roles.length > 0 && !principal.roles.includes(role)) {
+  if (role && principal.kind === "human" && !principal.roles.includes(role)) {
     throw new ApprovalError(`principal does not hold role ${role} (§27.3 separation of duties)`);
   }
   const record = {
@@ -239,11 +239,19 @@ export function evaluatePolicy(policy, decisions, { packageHash, registry }) {
     const missing = policy.roles.filter((role) => (byRole.get(role)?.size ?? 0) === 0);
     if (policy.separationOfDuties) {
       // §27.3 — each required role must be satisfied by a DISTINCT principal.
-      const used = new Set();
-      for (const role of policy.roles) {
-        const candidate = [...(byRole.get(role) ?? [])].find((principal) => !used.has(principal));
-        if (!candidate) return { satisfied: false, missing: [role], reason: "separation of duties requires distinct principals" };
-        used.add(candidate);
+      // Backtracking assignment so a valid matching is never missed by order.
+      const assign = (index, used) => {
+        if (index === policy.roles.length) return true;
+        for (const principal of byRole.get(policy.roles[index]) ?? []) {
+          if (used.has(principal)) continue;
+          used.add(principal);
+          if (assign(index + 1, used)) return true;
+          used.delete(principal);
+        }
+        return false;
+      };
+      if (!assign(0, new Set())) {
+        return { satisfied: false, missing: [...policy.roles], reason: "separation of duties requires distinct principals" };
       }
     }
     return { satisfied: missing.length === 0, missing };
