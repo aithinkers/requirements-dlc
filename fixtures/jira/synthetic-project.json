@@ -1,0 +1,53 @@
+{
+  "description": "Recorded sanitized fixtures for a synthetic Jira Cloud company-managed project COM (\u00a744.4). No production data.",
+  "createmeta": {
+    "projects": [
+      {
+        "key": "COM",
+        "issuetypes": [
+          {
+            "id": "10001",
+            "name": "Story",
+            "subtask": false,
+            "fields": {
+              "summary": {},
+              "description": {}
+            }
+          },
+          {
+            "id": "10002",
+            "name": "Task",
+            "subtask": false,
+            "fields": {
+              "summary": {}
+            }
+          },
+          {
+            "id": "10003",
+            "name": "Readiness Review",
+            "subtask": false,
+            "fields": {
+              "summary": {}
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "myself": {
+    "accountId": "acc-alex-immutable",
+    "displayName": "Alex Morgan",
+    "active": true
+  },
+  "issue_com_104": {
+    "id": "20104",
+    "key": "COM-104",
+    "fields": {
+      "summary": "Preserve an incomplete checkout",
+      "status": {
+        "name": "To Do"
+      },
+      "updated": "2026-08-15 18:00"
+    }
+  }
+}

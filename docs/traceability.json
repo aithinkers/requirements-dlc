@@ -229,10 +229,15 @@
         "§33",
         "§44.4"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/connectors/jira/index.mjs",
+          "fixtures/jira/synthetic-project.json"
+        ],
+        "tests": [
+          "tests/governance/jira-connector.test.mjs"
+        ]
       }
     },
     {
