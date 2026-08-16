@@ -6,6 +6,10 @@
  * identities, shared/automation accounts in human roles, stale hashes, and
  * unknown accounts never satisfy policy. Baselines are immutable; redaction
  * preserves tombstones and original hashes without rewriting history.
+ *
+ * Deferred from this slice (§27.3): sequential ordering, delegation, groups,
+ * timeout/reminder/escalation, and advisory-only review — tracked for the
+ * readiness/engagement layer. Change invalidation lives in lifecycle.mjs.
  */
 
 import {
@@ -16,6 +20,14 @@ import {
   sourceHash
 } from "./canonical.mjs";
 import { isCanonicalIdentity, mintIdentity } from "./identity.mjs";
+
+function deepFreeze(value) {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const entry of Object.values(value)) deepFreeze(entry);
+  }
+  return value;
+}
 
 export class ApprovalError extends Error {
   constructor(message) {
@@ -62,6 +74,13 @@ export class IdentityRegistry {
     }
     if (!isCanonicalIdentity(verifiedBy)) throw new ApprovalError("a binding requires a canonical verifier");
     if (!verifiedAt) throw new ApprovalError("a binding requires a verification time");
+    // §27.2 — one provider account binds to exactly one canonical principal.
+    for (const other of this.#principals.values()) {
+      if (other.bindings.some((entry) => entry.provider === provider && entry.connection === connection
+        && entry.account_id === accountId && entry.status === "verified")) {
+        throw new ApprovalError(`provider account is already bound to principal ${other.id} (§27.2)`);
+      }
+    }
     const binding = {
       provider, connection, tenant_id: tenantId ?? null, account_id: accountId,
       verified_via: verifiedVia, verified_by: verifiedBy, verified_at: verifiedAt, status: "verified"
@@ -143,6 +162,9 @@ export function recordDecision(registry, {
   }
   const { principal, binding } = registry.resolveAccount({ provider, connection, accountId });
   if (principal.status !== "active") throw new ApprovalError(`principal is not active: ${principal.id}`);
+  if (role && principal.kind === "human" && principal.roles.length > 0 && !principal.roles.includes(role)) {
+    throw new ApprovalError(`principal does not hold role ${role} (§27.3 separation of duties)`);
+  }
   const record = {
     schema_version: "rdlc.approval-decision/v0.2",
     id: mintIdentity(),
@@ -160,6 +182,17 @@ export function recordDecision(registry, {
   return Object.freeze(record);
 }
 
+/** Recompute and verify a decision record's integrity hash (§27.4). */
+export function verifyDecision(record) {
+  if (!record?.decision_hash) return false;
+  const { decision_hash, ...body } = record;
+  try {
+    return sourceHash(canonicalBytes({ ...body, decision_hash: undefined })).hash === decision_hash;
+  } catch {
+    return false;
+  }
+}
+
 /* --------------------------------------------------------- approval policies */
 
 /**
@@ -170,8 +203,15 @@ export function recordDecision(registry, {
 export function evaluatePolicy(policy, decisions, { packageHash, registry }) {
   const relevant = decisions.filter((entry) => entry.package_hash === packageHash);
   for (const entry of relevant) {
+    // §27.4 — only integrity-verified decision records count toward policy.
+    if (!verifyDecision(entry)) {
+      throw new ApprovalError(`decision record fails integrity verification: ${entry.id ?? "<unidentified>"}`);
+    }
     const principal = registry.get(entry.principal);
-    if (principal.kind !== "human" && !policy.automationRoles?.includes(entry.role)) {
+    if (principal.kind !== entry.principal_kind) {
+      throw new ApprovalError(`decision principal kind does not match the registry: ${entry.principal}`);
+    }
+    if (principal.kind !== "human" && entry.decision === "approve" && !policy.automationRoles?.includes(entry.role)) {
       throw new ApprovalError(`a non-human principal cannot satisfy human role ${entry.role} (§27.2)`);
     }
   }
@@ -191,8 +231,21 @@ export function evaluatePolicy(policy, decisions, { packageHash, registry }) {
     return { satisfied: count >= policy.quorum, count, quorum: policy.quorum };
   }
   if (policy.kind === "one-per-role") {
-    const rolesSatisfied = new Set(approvals.map((entry) => entry.role));
-    const missing = policy.roles.filter((role) => !rolesSatisfied.has(role));
+    const byRole = new Map();
+    for (const entry of approvals) {
+      if (!byRole.has(entry.role)) byRole.set(entry.role, new Set());
+      byRole.get(entry.role).add(entry.principal);
+    }
+    const missing = policy.roles.filter((role) => (byRole.get(role)?.size ?? 0) === 0);
+    if (policy.separationOfDuties) {
+      // §27.3 — each required role must be satisfied by a DISTINCT principal.
+      const used = new Set();
+      for (const role of policy.roles) {
+        const candidate = [...(byRole.get(role) ?? [])].find((principal) => !used.has(principal));
+        if (!candidate) return { satisfied: false, missing: [role], reason: "separation of duties requires distinct principals" };
+        used.add(candidate);
+      }
+    }
     return { satisfied: missing.length === 0, missing };
   }
   throw new ApprovalError(`unknown approval policy kind: ${policy.kind}`);
@@ -238,14 +291,14 @@ export function createBaseline({ packages, artifactHashes, sourceLocks = [], tom
     adopted_redaction_tombstones: tombstones,
     metadata
   });
-  return Object.freeze({
+  return deepFreeze({
     schema_version: "rdlc.baseline/v0.2",
     id: mintIdentity(),
-    approval_package_hashes: Object.freeze(packages.map((entry) => entry.package_hash)),
-    artifact_hashes: Object.freeze([...artifactHashes]),
-    source_locks: Object.freeze([...sourceLocks]),
-    adopted_redaction_tombstones: Object.freeze([...tombstones]),
-    metadata: Object.freeze({ ...metadata }),
+    approval_package_hashes: packages.map((entry) => entry.package_hash),
+    artifact_hashes: structuredClone([...artifactHashes]),
+    source_locks: structuredClone([...sourceLocks]),
+    adopted_redaction_tombstones: structuredClone([...tombstones]),
+    metadata: structuredClone({ ...metadata }),
     baseline_root_hash: root.hash,
     availability_state: "reconstructable"
   });
@@ -283,9 +336,16 @@ export function createTombstone({
  */
 export function applyRedaction(baseline, { tombstones, authority, storageBoundary, nonReconstructable = false, exceptions = [] }) {
   if (!Array.isArray(tombstones) || tombstones.length === 0) throw new ApprovalError("redaction requires tombstones");
+  for (const entry of tombstones) {
+    if (entry.affected_baseline !== baseline.baseline_root_hash) {
+      throw new ApprovalError(`tombstone ${entry.id} was minted against a different baseline (§41.1)`);
+    }
+  }
   const addendumBody = {
     original_baseline_root: baseline.baseline_root_hash,
-    tombstones: tombstones.map((entry) => ({ id: entry.id, artifact: entry.artifact, original_content_hash: entry.original_content_hash })),
+    tombstones: tombstones
+      .map((entry) => ({ id: entry.id, artifact: entry.artifact, original_content_hash: entry.original_content_hash }))
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
     authority,
     storage_boundary: storageBoundary,
     availability_state: nonReconstructable ? "non-reconstructable" : "redacted"

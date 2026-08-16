@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   ApprovalError,
   IdentityRegistry,
+  verifyDecision,
   applyRedaction,
   buildApprovalPackage,
   createBaseline,
@@ -148,9 +149,14 @@ test("FEAT-009: an automation principal never satisfies a human role (§27.2)", 
     /non-human principal cannot satisfy human role/
   );
   // Explicitly authorized deterministic roles are permitted (§27.2).
+  const botCheck = recordDecision(registry, {
+    provider: "jira", connection: "delivery-jira", accountId: "acc-bot",
+    decision: "approve", packageHash: opened.package_hash, expectedPackageHash: opened.package_hash,
+    role: "release-check", authenticationContext: "ctx", at: "t"
+  });
   const allowed = evaluatePolicy(
     { kind: "one-per-role", roles: ["release-check"], automationRoles: ["release-check"] },
-    [{ ...bot, role: "release-check" }],
+    [botCheck],
     { packageHash: opened.package_hash, registry }
   );
   assert.equal(allowed.satisfied, true);
@@ -230,4 +236,91 @@ test("FEAT-009: redaction preserves tombstones and original hashes without rewri
   assert.match(addendum.addendum_hash, /^sha256:[0-9a-f]{64}$/);
   assert.deepEqual(addendum.deletion_exceptions, ["provider backup retention until 2026-12-01"]);
   assert.ok(!JSON.stringify(addendum).includes("the secret"));
+});
+
+test("FEAT-009: forged or mutated decision records fail integrity verification (review HIGH)", () => {
+  const { registry, alex } = registryWith();
+  const opened = pkg();
+  const forged = { principal: alex.id, principal_kind: "human", decision: "approve", package_hash: opened.package_hash, role: "product-owner" };
+  assert.throws(
+    () => evaluatePolicy({ kind: "all-required", required: [alex.id] }, [forged], { packageHash: opened.package_hash, registry }),
+    /fails integrity verification/
+  );
+  const real = recordDecision(registry, {
+    provider: "jira", connection: "delivery-jira", accountId: "acc-alex",
+    decision: "reject", packageHash: opened.package_hash, expectedPackageHash: opened.package_hash,
+    role: "product-owner", authenticationContext: "ctx", at: "t"
+  });
+  const flipped = { ...real, decision: "approve" };
+  assert.throws(
+    () => evaluatePolicy({ kind: "all-required", required: [alex.id] }, [flipped], { packageHash: opened.package_hash, registry }),
+    /fails integrity verification/
+  );
+  assert.equal(verifyDecision(real), true);
+  assert.equal(verifyDecision(flipped), false);
+});
+
+test("FEAT-009: one provider account binds to exactly one principal (review HIGH)", () => {
+  const registry = new IdentityRegistry();
+  const a = registry.registerPrincipal({ displayName: "A", kind: "human" });
+  const b = registry.registerPrincipal({ displayName: "B", kind: "human" });
+  registry.addBinding(a.id, { provider: "jira", connection: "c", accountId: "acc-1", verifiedVia: "authenticated-self-binding", verifiedBy: a.id, verifiedAt: "t" });
+  assert.throws(
+    () => registry.addBinding(b.id, { provider: "jira", connection: "c", accountId: "acc-1", verifiedVia: "administrator-attestation", verifiedBy: a.id, verifiedAt: "t" }),
+    /already bound to principal/
+  );
+  // After revocation the account may be re-bound.
+  registry.revokeBinding(a.id, "acc-1", { at: "t2" });
+  registry.addBinding(b.id, { provider: "jira", connection: "c", accountId: "acc-1", verifiedVia: "administrator-attestation", verifiedBy: a.id, verifiedAt: "t3" });
+});
+
+test("FEAT-009: asserted roles must be held; separation of duties requires distinct principals (review MEDIUM)", () => {
+  const { registry } = registryWith();
+  const opened = pkg();
+  assert.throws(
+    () => recordDecision(registry, {
+      provider: "jira", connection: "delivery-jira", accountId: "acc-alex",
+      decision: "approve", packageHash: opened.package_hash, expectedPackageHash: opened.package_hash,
+      role: "compliance", authenticationContext: "ctx", at: "t"
+    }),
+    /does not hold role/
+  );
+  // One principal holding both roles cannot satisfy SoD alone.
+  const multi = new IdentityRegistry();
+  const solo = multi.registerPrincipal({ displayName: "Solo", kind: "human", roles: ["product-owner", "compliance"] });
+  multi.addBinding(solo.id, { provider: "jira", connection: "c", accountId: "acc-solo", verifiedVia: "authenticated-self-binding", verifiedBy: solo.id, verifiedAt: "t" });
+  const d1 = recordDecision(multi, { provider: "jira", connection: "c", accountId: "acc-solo", decision: "approve", packageHash: opened.package_hash, expectedPackageHash: opened.package_hash, role: "product-owner", authenticationContext: "ctx", at: "t" });
+  const d2 = recordDecision(multi, { provider: "jira", connection: "c", accountId: "acc-solo", decision: "approve", packageHash: opened.package_hash, expectedPackageHash: opened.package_hash, role: "compliance", authenticationContext: "ctx", at: "t" });
+  const relaxed = evaluatePolicy({ kind: "one-per-role", roles: ["product-owner", "compliance"] }, [d1, d2], { packageHash: opened.package_hash, registry: multi });
+  assert.equal(relaxed.satisfied, true, "without SoD one principal may fill both roles");
+  const strict = evaluatePolicy({ kind: "one-per-role", roles: ["product-owner", "compliance"], separationOfDuties: true }, [d1, d2], { packageHash: opened.package_hash, registry: multi });
+  assert.equal(strict.satisfied, false);
+  assert.match(strict.reason, /distinct principals/);
+});
+
+test("FEAT-009: redaction addenda bind to their baseline and hash order-stably (review MEDIUM)", () => {
+  const opened = pkg();
+  const baseline = createBaseline({ packages: [opened], artifactHashes: [H("a")] });
+  const other = createBaseline({ packages: [opened], artifactHashes: [H("b")] });
+  const mk = (artifact, root) => createTombstone({
+    artifact, originalContentHash: H("c"), affectedPackage: opened.package_hash, affectedBaseline: root,
+    actor: mintIdentity(), authority: "privacy-office", scope: "s", reasonCode: "r", decisionAt: "t"
+  });
+  const t1 = mk(mintIdentity(), baseline.baseline_root_hash);
+  const t2 = mk(mintIdentity(), baseline.baseline_root_hash);
+  const wrong = mk(mintIdentity(), other.baseline_root_hash);
+  assert.throws(
+    () => applyRedaction(baseline, { tombstones: [wrong], authority: "x", storageBoundary: "repo" }),
+    /different baseline/
+  );
+  const forward = applyRedaction(baseline, { tombstones: [t1, t2], authority: "x", storageBoundary: "repo" });
+  const reversed = applyRedaction(baseline, { tombstones: [t2, t1], authority: "x", storageBoundary: "repo" });
+  assert.equal(forward.addendum.addendum_hash, reversed.addendum.addendum_hash);
+});
+
+test("FEAT-009: baselines are deeply frozen (review LOW)", () => {
+  const opened = pkg();
+  const baseline = createBaseline({ packages: [opened], artifactHashes: [H("a")], sourceLocks: [{ id: "L1", rev: 1 }], metadata: { nested: { x: 1 } } });
+  assert.throws(() => { baseline.source_locks[0].rev = 2; }, TypeError);
+  assert.throws(() => { baseline.metadata.nested.x = 2; }, TypeError);
 });
