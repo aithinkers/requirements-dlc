@@ -1,0 +1,16 @@
+schema_version: rdlc.work-claim/v0.2
+id: urn:uuid:0198b840-4b2c-79e1-8f56-3d7a9c1e5b20
+display_id: CL-17
+actor: urn:uuid:0198b7c0-2d5e-7f31-9a43-2c8e5b6a7012
+workstream: checkout-recovery-stories
+scope:
+  requirements:
+    - urn:uuid:0198b7e0-6a2f-7b41-8d3e-2f7c9a6b4d10
+  acceptance_criteria:
+    - urn:uuid:0198b7e4-3c1d-7a20-b954-7e6d5c4b3a21
+  components:
+    - urn:uuid:0198b7d5-8c4a-7d22-a142-6b5e3c9f7011
+intent: Create recovery and expiration stories.
+created_at: 2026-08-15T19:00:00Z
+expires_at: 2026-08-16T19:00:00Z
+status: active

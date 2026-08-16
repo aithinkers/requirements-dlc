@@ -1,0 +1,28 @@
+schema_version: rdlc.artifact/v0.2
+id: urn:uuid:0198b7e0-6a2f-7b41-8d3e-2f7c9a6b4d10
+display_id: REQ-104
+project: checkout-modernization
+type: functional-requirement
+title: Preserve an incomplete checkout
+governance_state: draft
+version: 3
+origin:
+  kind: user-capture
+  actor: urn:uuid:0198b7c0-2d5e-7f31-9a43-2c8e5b6a7012
+  captured_at: 2026-08-15T15:00:00Z
+statement: >-
+  The checkout service shall preserve an authenticated customer's incomplete
+  checkout for the configured retention period.
+rationale: Reduce abandonment after interruption.
+owner: role:product-owner
+sources:
+  - kb://product/customer-research/interrupted-checkout
+  - external://jira/commerce/DISC-42#comment-10017
+relationships:
+  - type: derives-from
+    target: urn:uuid:0198b7d0-5b1e-7a30-9c2d-1e6b8f5a3c09
+  - type: affects
+    target: urn:uuid:0198b7d5-8c4a-7d22-a142-6b5e3c9f7011
+external_refs: []
+created_at: 2026-08-15T15:00:00Z
+updated_at: 2026-08-15T16:12:00Z

@@ -1,0 +1,84 @@
+schema_version: rdlc.project/v0.2
+
+project:
+  id: checkout-modernization
+  title: Checkout Modernization
+  default_space: commerce
+  authority_mode: files-authoritative
+
+inputs:
+  scope_documents:
+    - path: inputs/checkout-modernization-scope.docx
+      role: primary-scope
+  confluence:
+    - connection: product-confluence
+      space_ids:
+        - "98421"
+      root_page_ids:
+        - "123456"
+      include_descendants: true
+      include:
+        - pages
+        - attachments
+        - comments
+      mode: read-only
+
+knowledge:
+  enabled: false
+
+company_setup:
+  profile: config/company/delivery-profile.yaml
+  discovery: merge-profile-and-tracker
+  unknown_issue_type_policy: ask
+
+taxonomy:
+  profile: product-delivery
+  portfolio_enabled: true
+  hierarchy:
+    - portfolio-epic
+    - initiative
+    - epic
+    - capability
+    - feature
+    - story
+    - task
+
+templates:
+  packs:
+    - core
+    - organization
+    - commerce
+
+approval:
+  default_policy: all-required-by-role
+  material_change_policy: invalidate-affected
+
+collaboration:
+  lease_authority:
+    kind: git-ref-compare-and-swap
+    remote: origin
+    ref_namespace: refs/rdlc/leases
+  alias_authority: lease-protected-counter
+
+estimation:
+  default_profile: team-story-points
+  allow_ai_suggestions: true
+  confirmation_required: true
+
+connectors:
+  - id: product-confluence
+    provider: confluence-cloud
+    mapping: config/sources/confluence-product.yaml
+    write_mode: read-only
+  - id: delivery-jira
+    provider: jira
+    mapping: config/connectors/jira-commerce.yaml
+    write_mode: approve-each-batch
+  - id: engineering-github
+    provider: github
+    mapping: config/connectors/github-engineering.yaml
+    write_mode: propose
+
+security:
+  external_content: untrusted
+  secrets_provider: environment

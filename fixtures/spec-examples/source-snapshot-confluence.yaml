@@ -1,0 +1,18 @@
+schema_version: rdlc.source-snapshot/v0.2
+id: urn:uuid:0198ba20-53e1-7c92-a647-3b5d7f9012c4
+provider: confluence-cloud
+connection: product-confluence
+site: example.atlassian.net/wiki
+space_id: "98421"
+space_key: PAY
+page_id: "123456"
+page_version: 19
+status: current
+title: Checkout Recovery Requirements
+parent_page_id: "120000"
+body_representation: storage
+author: confluence-account:abc123
+version_created_at: 2026-08-14T21:20:00Z
+retrieved_at: 2026-08-15T14:32:00Z
+source_hash: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+source_url: https://example.atlassian.net/wiki/spaces/PAY/pages/123456

@@ -1,0 +1,14 @@
+schema_version: rdlc.finding/v0.2
+id: urn:uuid:0198b820-7f2a-72d6-a341-4c5e6f708192
+display_id: F-017
+rule: RDLC-AC-004
+severity: blocking
+artifact: urn:uuid:0198b7e0-6a2f-7b41-8d3e-2f7c9a6b4d10
+artifact_display_id: REQ-104
+location: acceptance_criteria[1]
+message: Expected retention duration is not bounded.
+evidence:
+  - kb://payments-policy/retention/incomplete-checkout
+confidence: high
+suggested_action: Reference the configured retention policy and define expiry behavior.
+status: open

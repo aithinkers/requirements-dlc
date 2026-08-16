@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rdlc.dev/schemas/v0.2/work-claim.schema.json",
+  "title": "R-DLC advisory work claim (spec §35.2)",
+  "type": "object",
+  "required": ["schema_version", "id", "actor", "workstream", "scope", "intent", "created_at", "expires_at", "status"],
+  "properties": {
+    "schema_version": { "const": "rdlc.work-claim/v0.2" },
+    "id": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "display_id": { "$ref": "common.schema.json#/$defs/displayAlias" },
+    "actor": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "workstream": { "type": "string", "minLength": 1 },
+    "scope": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "requirements": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/uuidUrn" } },
+        "acceptance_criteria": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/uuidUrn" } },
+        "components": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/uuidUrn" } },
+        "planning_items": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/uuidUrn" } }
+      },
+      "additionalProperties": false
+    },
+    "intent": { "type": "string", "minLength": 1 },
+    "created_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+    "expires_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+    "status": { "enum": ["active", "released", "expired"] }
+  },
+  "additionalProperties": false
+}
