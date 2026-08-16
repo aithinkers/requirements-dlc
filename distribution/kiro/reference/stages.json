@@ -1,0 +1,467 @@
+{
+  "schema_version": "rdlc.stages/v0.2",
+  "protocol": "rdlc/reference/stage-protocol.md (installed) | core/protocols/stage-protocol.md (repository)",
+  "stages": [
+    {
+      "phase": "0-initialize",
+      "slug": "workspace-detection",
+      "condition": "ALWAYS",
+      "lead_role": "facilitator",
+      "produces": [
+        "project-context",
+        "capabilities",
+        "state"
+      ],
+      "scopes": null,
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "0-initialize",
+      "slug": "scope-selection",
+      "condition": "ALWAYS",
+      "lead_role": "facilitator",
+      "produces": [
+        "execution-plan"
+      ],
+      "scopes": null,
+      "sensors": [],
+      "confirmation": "required"
+    },
+    {
+      "phase": "1-frame",
+      "slug": "intent-framing",
+      "condition": "ALWAYS",
+      "lead_role": "business-analyst",
+      "produces": [
+        "intent",
+        "problem",
+        "outcomes"
+      ],
+      "scopes": null,
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "1-frame",
+      "slug": "stakeholder-governance-mapping",
+      "condition": "ALWAYS",
+      "lead_role": "product-owner",
+      "produces": [
+        "stakeholder-registry",
+        "approval-roles"
+      ],
+      "scopes": null,
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "2-discover",
+      "slug": "source-discovery",
+      "condition": "ALWAYS",
+      "lead_role": "business-analyst",
+      "produces": [
+        "source-plan",
+        "source-snapshots"
+      ],
+      "scopes": null,
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "2-discover",
+      "slug": "interviews-workshops",
+      "condition": "CONDITIONAL",
+      "lead_role": "business-analyst",
+      "produces": [
+        "captures",
+        "evidence",
+        "questions"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "2-discover",
+      "slug": "backlog-comment-ingestion",
+      "condition": "CONDITIONAL",
+      "lead_role": "integration-manager",
+      "produces": [
+        "imported-work",
+        "comment-queue"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated",
+        "audit",
+        "migration"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "3-model",
+      "slug": "process-modeling",
+      "condition": "CONDITIONAL",
+      "lead_role": "business-analyst",
+      "produces": [
+        "process-artifacts"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "3-model",
+      "slug": "domain-rules-glossary",
+      "condition": "CONDITIONAL",
+      "lead_role": "business-analyst",
+      "produces": [
+        "models",
+        "business-rules"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "3-model",
+      "slug": "component-discovery",
+      "condition": "CONDITIONAL",
+      "lead_role": "delivery-planner",
+      "produces": [
+        "component-candidates"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "4-define",
+      "slug": "requirement-drafting",
+      "condition": "ALWAYS",
+      "lead_role": "business-analyst",
+      "produces": [
+        "requirement-set"
+      ],
+      "scopes": null,
+      "sensors": [],
+      "confirmation": "required"
+    },
+    {
+      "phase": "4-define",
+      "slug": "criteria-and-nfrs",
+      "condition": "CONDITIONAL",
+      "lead_role": "requirements-reviewer",
+      "produces": [
+        "acceptance-criteria",
+        "nfrs"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated",
+        "change"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "5-plan",
+      "slug": "hierarchy-and-slicing",
+      "condition": "CONDITIONAL",
+      "lead_role": "delivery-planner",
+      "produces": [
+        "planning-items"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated",
+        "migration"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "5-plan",
+      "slug": "promotion-collision-review",
+      "condition": "CONDITIONAL",
+      "lead_role": "delivery-planner",
+      "produces": [
+        "coverage-map",
+        "promotion-decisions"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated",
+        "migration"
+      ],
+      "sensors": [
+        "promotion-gate"
+      ],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "5-plan",
+      "slug": "components-ownership",
+      "condition": "CONDITIONAL",
+      "lead_role": "delivery-planner",
+      "produces": [
+        "component-registry"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "5-plan",
+      "slug": "dependencies-sequencing",
+      "condition": "CONDITIONAL",
+      "lead_role": "delivery-planner",
+      "produces": [
+        "dependency-graph",
+        "waves",
+        "blockers"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated",
+        "migration"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "5-plan",
+      "slug": "estimation",
+      "condition": "CONDITIONAL",
+      "lead_role": "delivery-planner",
+      "produces": [
+        "estimates"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "6-validate",
+      "slug": "schema-template-validation",
+      "condition": "ALWAYS",
+      "lead_role": "requirements-reviewer",
+      "produces": [
+        "deterministic-findings"
+      ],
+      "scopes": null,
+      "sensors": [
+        "schema",
+        "template-catalog"
+      ],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "6-validate",
+      "slug": "semantic-review",
+      "condition": "ALWAYS",
+      "lead_role": "requirements-reviewer",
+      "produces": [
+        "review-findings"
+      ],
+      "scopes": null,
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "6-validate",
+      "slug": "trace-coverage-review",
+      "condition": "ALWAYS",
+      "lead_role": "traceability-auditor",
+      "produces": [
+        "coverage-report"
+      ],
+      "scopes": null,
+      "sensors": [
+        "coverage",
+        "cycles"
+      ],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "7-govern",
+      "slug": "comment-resolution",
+      "condition": "ALWAYS",
+      "lead_role": "business-analyst",
+      "produces": [
+        "dispositions"
+      ],
+      "scopes": null,
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "7-govern",
+      "slug": "readiness-approval",
+      "condition": "ALWAYS",
+      "lead_role": "product-owner",
+      "produces": [
+        "approval-package",
+        "decisions"
+      ],
+      "scopes": null,
+      "sensors": [
+        "readiness",
+        "package-hash"
+      ],
+      "confirmation": "required"
+    },
+    {
+      "phase": "7-govern",
+      "slug": "baseline",
+      "condition": "CONDITIONAL",
+      "lead_role": "product-owner",
+      "produces": [
+        "baseline"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated",
+        "change"
+      ],
+      "sensors": [],
+      "confirmation": "required"
+    },
+    {
+      "phase": "8-synchronize",
+      "slug": "changeset-planning",
+      "condition": "CONDITIONAL",
+      "lead_role": "integration-manager",
+      "produces": [
+        "changeset-preview"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated",
+        "migration"
+      ],
+      "sensors": [],
+      "confirmation": "required"
+    },
+    {
+      "phase": "8-synchronize",
+      "slug": "apply-and-verify",
+      "condition": "CONDITIONAL",
+      "lead_role": "integration-manager",
+      "produces": [
+        "tracker-items",
+        "receipts"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated",
+        "migration"
+      ],
+      "sensors": [
+        "read-back",
+        "receipts"
+      ],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "9-verify",
+      "slug": "test-design",
+      "condition": "CONDITIONAL",
+      "lead_role": "test-designer",
+      "produces": [
+        "draft-test-cases",
+        "coverage"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "9-verify",
+      "slug": "result-ingestion",
+      "condition": "CONDITIONAL",
+      "lead_role": "test-designer",
+      "produces": [
+        "verification-evidence"
+      ],
+      "scopes": [
+        "standard",
+        "portfolio",
+        "regulated"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "10-evolve",
+      "slug": "change-impact",
+      "condition": "CONDITIONAL",
+      "lead_role": "compliance-reviewer",
+      "produces": [
+        "change-request",
+        "affected-graph"
+      ],
+      "scopes": [
+        "change",
+        "regulated",
+        "portfolio"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    },
+    {
+      "phase": "10-evolve",
+      "slug": "re-review-re-baseline",
+      "condition": "CONDITIONAL",
+      "lead_role": "product-owner",
+      "produces": [
+        "new-approval-package",
+        "new-baseline"
+      ],
+      "scopes": [
+        "change",
+        "regulated",
+        "portfolio"
+      ],
+      "sensors": [],
+      "confirmation": "summary"
+    }
+  ]
+}

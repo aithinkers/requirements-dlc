@@ -61,16 +61,23 @@ async function listPluginFiles(tool) {
         files.push({ source: join(base, directory, name), relative: join(destination, name) });
       }
     }
+    for (const relative of await walk(join(base, "reference"))) {
+      files.push({ source: join(base, "reference", relative), relative: join("rdlc", "reference", relative) });
+    }
     return files;
   }
   // Codex and Kiro surfaces install their dot-directory trees verbatim
   // (.codex/… or .kiro/…). Experimental outside the 0.1 conformance claim.
   const base = join(packageRoot, "distribution", tool);
   const dot = tool === "codex" ? ".codex" : ".kiro";
-  return (await walk(join(base, dot))).map((relative) => ({
+  const files = (await walk(join(base, dot))).map((relative) => ({
     source: join(base, dot, relative),
     relative: join(dot, relative)
   }));
+  for (const relative of await walk(join(base, "reference"))) {
+    files.push({ source: join(base, "reference", relative), relative: join("rdlc", "reference", relative) });
+  }
+  return files;
 }
 
 /** §11 project scaffold with §47 recommended defaults. */
