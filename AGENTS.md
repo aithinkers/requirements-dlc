@@ -97,7 +97,7 @@ bypass and status activity remain auditable in GitHub.
   test projects; they must never mutate production work items.
 - Fail closed when a required policy, schema, lock, receipt, or identity cannot
   be resolved.
-- Keep generated artifacts reproducible and never hand-edit `dist/` output.
+- Keep generated artifacts reproducible and never hand-edit `distribution/` generated output.
 
 ## Definition of done
 

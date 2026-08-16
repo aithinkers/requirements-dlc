@@ -256,7 +256,7 @@
           "core/lib/engagement.mjs",
           "core/commands/commands.json",
           "scripts/generate-distribution.mjs",
-          "dist/claude-code/commands/rdlc-status.md"
+          "distribution/claude-code/commands/rdlc-status.md"
         ],
         "tests": [
           "tests/governance/engagement.test.mjs"
@@ -335,8 +335,8 @@
         "implementation": [
           "core/roles/roles.json",
           "scripts/generate-distribution.mjs",
-          "dist/claude-code/.claude-plugin/plugin.json",
-          "dist/claude-code/agents/rdlc-facilitator.md"
+          "distribution/claude-code/.claude-plugin/plugin.json",
+          "distribution/claude-code/agents/rdlc-facilitator.md"
         ],
         "tests": [
           "tests/governance/engagement.test.mjs"
@@ -381,6 +381,24 @@
         "tests": [
           "tests/governance/engagement.test.mjs"
         ]
+      }
+    },
+    {
+      "id": "ADR-002",
+      "title": "Consolidate generated output under distribution/ for K-DLC layout parity",
+      "issue": 36,
+      "specification_sections": [
+        "§36",
+        "§2.3"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "docs/decisions/0002-distribution-layout-parity.md",
+          "docs/specification-baseline.md",
+          "distribution/claude-code/.claude-plugin/plugin.json"
+        ],
+        "tests": []
       }
     }
   ]

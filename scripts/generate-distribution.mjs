@@ -2,8 +2,8 @@
 /**
  * Generate the Claude Code harness distribution from the authored core (§36):
  * commands (§37), role-lens agents (§38), and the plugin manifest. `--check`
- * verifies the committed dist/ matches the authored core byte-for-byte (the
- * §36 drift check); generation never hand-edits dist/ output.
+ * verifies the committed distribution/claude-code tree matches the authored
+ * core byte-for-byte (the §36 drift check); generated output is never hand-edited.
  */
 
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
@@ -11,7 +11,7 @@ import { join } from "node:path";
 import process from "node:process";
 
 const CHECK = process.argv.includes("--check");
-const ROOT = "dist/claude-code";
+const ROOT = "distribution/claude-code";
 const OUT = `${ROOT}/commands`;
 const AGENTS = `${ROOT}/agents`;
 const PLUGIN = `${ROOT}/.claude-plugin`;
