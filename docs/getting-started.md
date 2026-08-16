@@ -18,7 +18,9 @@ node scripts/setup.mjs --target /path/to/your-project
 ```
 
 Setup is idempotent and never overwrites files you have modified (rerun with
-`--force` to replace them; `--check` reports drift without writing). It
+`--force` to replace them; `--check` reports drift without writing). Exit
+codes: `0` success or up-to-date, `1` drift found or setup error, `2`
+completed but user-modified files were protected. It
 installs:
 
 - `.claude/plugins/rdlc/` — the Claude Code plugin: 26 `/rdlc-*` commands and

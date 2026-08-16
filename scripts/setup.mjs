@@ -14,7 +14,7 @@
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 
@@ -106,14 +106,16 @@ async function fileState(path, expected) {
 
 export async function runSetup({ target, force = false, check = false, log = console.log }) {
   const results = { installed: [], skipped: [], protected: [], scaffolded: [], drift: [] };
+  let targetStat;
   try {
-    await stat(target);
+    targetStat = await stat(target);
   } catch {
     throw new Error(`target directory does not exist: ${target}`);
   }
+  if (!targetStat.isDirectory()) throw new Error(`target is not a directory: ${target}`);
 
   const plan = await listPluginFiles();
-  const projectId = target.split("/").filter(Boolean).at(-1) ?? "rdlc-project";
+  const projectId = basename(resolve(target)) || "rdlc-project";
   plan.push({ content: projectManifest(projectId), relative: "requirements-project.yaml" });
 
   for (const entry of plan) {
@@ -169,10 +171,19 @@ export async function runSetup({ target, force = false, check = false, log = con
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    console.log("Usage: rdlc-setup [--target <dir>] [--force] [--check]");
+    console.log(`Usage: rdlc-setup [--target <dir>] [--force] [--check]
+
+Exit codes: 0 success/up-to-date; 1 drift found (--check) or setup error;
+2 completed but user-modified files were protected (rerun with --force).`);
     process.exit(0);
   }
-  const results = await runSetup(options);
+  let results;
+  try {
+    results = await runSetup(options);
+  } catch (error) {
+    console.error(`rdlc-setup: ${error.message}`);
+    process.exit(1);
+  }
   if (options.check && results.drift.length > 0) process.exit(1);
   if (results.protected.length > 0) process.exit(2);
 }
