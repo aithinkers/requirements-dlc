@@ -270,3 +270,12 @@ test("FEAT-006: source criteria liveness, semantic comparison hook, and approval
   assert.equal(comparisons.length, 2);
   assert.equal(comparisons.filter((f) => f.severity === "blocking").length, 1);
 });
+
+test("FEAT-006: whole-requirement covers without criteria still register as over-coverage", () => {
+  const req = { id: mintIdentity() };
+  const covers = [
+    { requirement: req.id, item: "s1", itemState: "draft" },
+    { requirement: req.id, item: "s2", itemState: "draft" }
+  ];
+  assert.equal(computeCoverage({ requirements: [req], covers }).get(req.id).state, "over-covered");
+});

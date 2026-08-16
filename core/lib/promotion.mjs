@@ -128,9 +128,14 @@ function coverageState(coverEntries, claimants) {
     if (declared && partitions.size === coverEntries.length) return "intentionally-multiple";
     // Disjoint-criteria covers are intentional decomposition, not duplication
     // (§35.4: over-covered means "substantially the same scope").
-    const overlapping = coverEntries.some((a, i) =>
-      coverEntries.some((b, j) => i < j && (a.criteria ?? []).some((criterion) => (b.criteria ?? []).includes(criterion)))
-    );
+    // A cover without declared criteria spans the whole requirement scope.
+    const overlaps = (a, b) => {
+      const ca = a.criteria ?? [];
+      const cb = b.criteria ?? [];
+      if (ca.length === 0 || cb.length === 0) return true;
+      return ca.some((criterion) => cb.includes(criterion));
+    };
+    const overlapping = coverEntries.some((a, i) => coverEntries.some((b, j) => i < j && overlaps(a, b)));
     if (!overlapping) return strongest;
     return "over-covered";
   }
