@@ -55,6 +55,8 @@ export const VERIFICATION_OUTCOMES = Object.freeze([
 ]);
 
 const AI_FORBIDDEN_GOVERNANCE = Object.freeze(["approved", "baselined"]);
+/** States that may pause into needs-clarification and thus be a return state (§14.2). */
+const CLARIFICATION_SOURCES = Object.freeze(["triaged", "working", "draft", "reviewed"]);
 
 function requireContext(context) {
   for (const field of ["actor", "actorKind", "reason", "policyVersion", "contentHash"]) {
@@ -65,14 +67,14 @@ function requireContext(context) {
   }
 }
 
-function auditRecord(dimension, from, to, artifact, context) {
+function auditRecord(dimension, from, to, artifact, context, resultingVersion = artifact.version) {
   return Object.freeze({
     dimension,
     from,
     to,
     artifact: artifact.id,
     prior_version: artifact.version,
-    resulting_version: artifact.version,
+    resulting_version: resultingVersion,
     content_hash: context.contentHash,
     policy_version: context.policyVersion,
     actor: context.actor,
@@ -94,8 +96,17 @@ export function transitionGovernance(artifact, to, context) {
   if (!allowed) throw new LifecycleError(`unknown governance state: ${from}`);
 
   let permitted = allowed.includes(to);
-  if (from === "needs-clarification" && to === artifact.return_state) permitted = true;
+  if (from === "needs-clarification" && to === artifact.return_state) {
+    if (!CLARIFICATION_SOURCES.includes(artifact.return_state)) {
+      throw new LifecycleError(`invalid recorded return state: ${artifact.return_state}`);
+    }
+    permitted = true;
+  }
   if (!permitted) throw new LifecycleError(`invalid governance transition: ${from} -> ${to}`);
+
+  if (to === "draft" && ["triaged", "working"].includes(from) && !context.promotionReview) {
+    throw new LifecycleError(`${from} -> draft requires a passing promotion review (§14.2, §14.4)`);
+  }
 
   if (AI_FORBIDDEN_GOVERNANCE.includes(to) && context.actorKind === "ai") {
     throw new LifecycleError(`an AI actor must not set governance state ${to} (§14.6)`);
@@ -117,8 +128,8 @@ export function transitionSynchronization(artifact, to, context) {
   const allowed = SYNCHRONIZATION_TRANSITIONS[from];
   if (!allowed) throw new LifecycleError(`unknown synchronization state: ${from}`);
   if (!allowed.includes(to)) throw new LifecycleError(`invalid synchronization transition: ${from} -> ${to}`);
-  if (["synchronized"].includes(to) && from === "applying" && !context.readbackHash) {
-    throw new LifecycleError("synchronized requires verified read-back evidence (§29.1)");
+  if (to === "synchronized" && !context.readbackHash) {
+    throw new LifecycleError("synchronized requires verified read-back evidence (§14.1.1, §29.1)");
   }
   return {
     artifact: { ...artifact, synchronization_state: to },
@@ -230,16 +241,19 @@ export function createRevision(artifact, { changedFields = [], changedRelationsh
     verification_outcome: "none"
   };
   delete revision.return_state;
-  const invalidatedApprovals = approvals.map((approval) =>
-    approval.artifact === artifact.id && approval.status === "current"
-      ? { ...approval, status: "invalidated", invalidated_by: classification.cause, invalidated_at: context.at ?? new Date().toISOString() }
-      : approval
-  );
+  const invalidatedApprovals = approvals.map((approval) => {
+    if (approval.artifact === artifact.id && approval.status === "current") {
+      return { ...approval, status: "invalidated", invalidated_by: classification.cause, invalidated_at: context.at ?? new Date().toISOString() };
+    }
+    if (approval.status !== "current") return approval;
+    // §27.7: every retained approval cites the rule and comparison proving validity.
+    return { ...approval, retention_rule: "unaffected-artifact", retention_comparison: `change ${classification.cause} applies only to ${artifact.id}` };
+  });
   return {
     priorRevision: frozen,
     revision,
     approvals: invalidatedApprovals,
     impact: { cause: classification.cause, requires: ["impact-analysis", "new-content-hash", "new-review-package"] },
-    audit: auditRecord("governance", artifact.governance_state, "working", artifact, context)
+    audit: auditRecord("governance", artifact.governance_state, "working", artifact, context, revision.version)
   };
 }

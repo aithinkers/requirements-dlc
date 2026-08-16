@@ -46,7 +46,8 @@ test("FEAT-005: every listed governance transition passes and every unlisted one
       const artifact = artifactIn(from);
       const allowed = GOVERNANCE_TRANSITIONS[from].includes(to);
       if (allowed) {
-        const { artifact: next, audit } = transitionGovernance(artifact, to, context);
+        const guarded = { ...context, promotionReview: "reviews/pr-1.json" };
+        const { artifact: next, audit } = transitionGovernance(artifact, to, guarded);
         assert.equal(next.governance_state, to);
         assert.equal(audit.from, from);
         assert.equal(audit.to, to);
@@ -192,4 +193,34 @@ test("FEAT-005: a material change creates a new revision and invalidates current
     () => createRevision(artifact, { changedFields: ["display_id"], approvals }, context),
     /material change/
   );
+});
+
+test("FEAT-005: promotion to draft requires a passing promotion review (review finding)", () => {
+  assert.throws(() => transitionGovernance(artifactIn("triaged"), "draft", context), /promotion review/);
+  assert.throws(() => transitionGovernance(artifactIn("working"), "draft", context), /promotion review/);
+  const { artifact } = transitionGovernance(artifactIn("working"), "draft", { ...context, promotionReview: "reviews/pr-1.json" });
+  assert.equal(artifact.governance_state, "draft");
+});
+
+test("FEAT-005: tampered return_state cannot jump to approved (review finding)", () => {
+  const tampered = artifactIn("needs-clarification", { return_state: "approved" });
+  assert.throws(() => transitionGovernance(tampered, "approved", context), LifecycleError);
+});
+
+test("FEAT-005: uncertain -> synchronized requires read-back evidence (review finding)", () => {
+  const artifact = artifactIn("approved", { synchronization_state: "uncertain" });
+  assert.throws(() => transitionSynchronization(artifact, "synchronized", context), /read-back/);
+});
+
+test("FEAT-005: revision audit records the resulting version; retained approvals cite their rule", () => {
+  const artifact = artifactIn("baselined");
+  const approvals = [
+    { artifact: artifact.id, status: "current" },
+    { artifact: "urn:uuid:0198b7d0-5b1e-7a30-9c2d-1e6b8f5a3c09", status: "current" }
+  ];
+  const result = createRevision(artifact, { changedFields: ["statement"], approvals }, context);
+  assert.equal(result.audit.prior_version, 3);
+  assert.equal(result.audit.resulting_version, 4);
+  assert.equal(result.approvals[1].retention_rule, "unaffected-artifact");
+  assert.match(result.approvals[1].retention_comparison, /applies only to/);
 });
