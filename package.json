@@ -79,6 +79,7 @@
     "./engagement": "./core/lib/engagement.mjs",
     "./connectors/jira": "./core/connectors/jira/index.mjs",
     "./schemas": "./core/schemas/v0.2/index.mjs",
-    "./template-catalog": "./core/lib/template-catalog.mjs"
+    "./template-catalog": "./core/lib/template-catalog.mjs",
+    "./connector-config": "./core/lib/connector-config.mjs"
   }
 }

@@ -102,6 +102,11 @@ estimation:
   allow_ai_suggestions: true
   confirmation_required: true
 
+# Declare connectors here and describe each in its mapping file, e.g.:
+#   - id: delivery-jira
+#     provider: jira
+#     mapping: config/connectors/jira-example.yaml
+#     write_mode: propose
 connectors: []
 
 security:
@@ -109,6 +114,35 @@ security:
   secrets_provider: environment
 `;
 }
+
+const EXAMPLE_MAPPING = `schema_version: rdlc.connector-mapping/v0.2
+version: jira-example/v1
+provider: jira
+project_key: COM
+fields: [summary, description, status, components, customfield_10016]
+
+estimation:
+  profile: team-story-points
+  provider_field: customfield_10016
+  scheme: story-points
+  allowed_values: [1, 2, 3, 5, 8, 13]
+  # confirmers: [urn:uuid:...]        # who may confirm estimates (§22.2)
+
+components:
+  provider_field: components
+  match_by: name
+
+artifact_types:
+  story:
+    issue_type: Story
+    template_fields:
+      statement: summary
+      acceptance_criteria: description
+  epic:
+    issue_type: Epic
+    template_fields:
+      outcome: summary
+`;
 
 const SCAFFOLD_DIRECTORIES = [
   "rdlc/spaces/main/policy",
@@ -142,6 +176,7 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
   const plan = await listPluginFiles(tool);
   const projectId = basename(resolve(target)) || "rdlc-project";
   plan.push({ content: projectManifest(projectId), relative: "requirements-project.yaml" });
+  plan.push({ content: EXAMPLE_MAPPING, relative: join("config", "connectors", "jira-example.yaml") });
 
   for (const entry of plan) {
     const destination = join(target, entry.relative);
