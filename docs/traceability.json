@@ -447,6 +447,28 @@
           "tests/governance/template-catalog.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-017",
+      "title": "Connector configuration format and loader",
+      "issue": 42,
+      "specification_sections": [
+        "§11.1",
+        "§20.1",
+        "§22.2",
+        "§29"
+      ],
+      "status": "verified",
+      "evidence": {
+        "implementation": [
+          "core/lib/connector-config.mjs",
+          "scripts/setup.mjs",
+          "docs/getting-started.md"
+        ],
+        "tests": [
+          "tests/governance/connector-config.test.mjs"
+        ]
+      }
     }
   ]
 }

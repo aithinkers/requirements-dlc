@@ -107,6 +107,41 @@ and the provider field; unmapped required fields surface as mapping gaps;
 externally edited items that no longer follow the format become RDLC-FMT-003
 review findings with dispositions — never silent repair.
 
+## Configuring a connector (fields, components, story points)
+
+Setup scaffolds `config/connectors/jira-example.yaml`. Copy it, fill in your
+project key, fields, and bindings, and declare it in
+`requirements-project.yaml`:
+
+```yaml
+connectors:
+  - id: delivery-jira
+    provider: jira
+    mapping: config/connectors/jira-com.yaml
+    write_mode: propose        # upgrade to approve-each-batch when ready to write
+```
+
+The mapping file binds everything in one place:
+
+- **fields** — the provider fields R-DLC reads, diffs, and read-back-verifies
+- **estimation** — which Jira field holds story points, the scheme and scale,
+  and who may confirm (AI values stay `suggested`; no auto conversion)
+- **components** — the provider field matched against the component registry
+- **artifact_types** — template ↔ issue-type ↔ field bindings per level
+  (story, epic, …) powering `validateProviderItem` and format-drift detection
+
+Load it in one call:
+
+```js
+import { loadConnectorConfig } from "requirements-dlc/connector-config";
+const [jira] = await loadConnectorConfig(projectRoot, { catalogTypes: catalog.types() });
+new JiraConnector({ transport, mapping: jira.connectorMapping, writeMode: jira.write_mode });
+catalog.detectFormatDrift(polledUpdates, jira.templateMappings.story);
+```
+
+Invalid configs fail closed with named reasons (unknown scheme, estimation
+field missing from `fields`, template field unmapped, duplicate issue types).
+
 ## Working as a team
 
 Declare advisory scope with `/rdlc-claim` (overlaps notify, never block),
