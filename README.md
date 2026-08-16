@@ -65,6 +65,18 @@ durable checkpoints.
 - **Bounded document intake** — anchored evidence from PDF, Office, diagrams,
   images, and email without executing untrusted content (spec §16)
 
+## Install
+
+```bash
+npx github:aithinkers/requirements-dlc
+```
+
+installs the Claude Code plugin (26 `/rdlc-*` commands + 10 role agents), a
+§47-defaults `requirements-project.yaml`, and the `rdlc/` engagement layout
+into your project — idempotently, without clobbering your edits. Then open
+the project in Claude Code and run `/rdlc-start`. Full walkthrough:
+[docs/getting-started.md](docs/getting-started.md).
+
 ## Development process
 
 This repository uses issue-first, review-gated development enforced by CI.

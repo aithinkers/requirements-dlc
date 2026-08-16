@@ -342,6 +342,27 @@
           "tests/governance/engagement.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-013",
+      "title": "Setup installer, package metadata, and quick start for distribution",
+      "issue": 32,
+      "specification_sections": [
+        "§11",
+        "§36",
+        "§47"
+      ],
+      "status": "verified",
+      "evidence": {
+        "implementation": [
+          "scripts/setup.mjs",
+          "package.json",
+          "docs/getting-started.md"
+        ],
+        "tests": [
+          "tests/governance/engagement.test.mjs"
+        ]
+      }
     }
   ]
 }
