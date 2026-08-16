@@ -198,3 +198,75 @@ test("FEAT-006: the review record identifies what it was reviewed against (§35.
   assert.equal(review.reviewed_against.baseline, "sha256:" + "f".repeat(64));
   assert.throws(() => promotionReview({ working }), /shared state is required/);
 });
+
+test("FEAT-006: conflicting coverage is never masked by partial coverage (review HIGH)", () => {
+  const req = { id: mintIdentity(), acceptance_criteria: ["c1", "c2"] };
+  const covers = [{ requirement: req.id, criteria: ["c1"], item: "s1", itemState: "draft", conflicting: true }];
+  const entry = computeCoverage({ requirements: [req], covers }).get(req.id);
+  assert.equal(entry.state, "conflicting-coverage");
+  const review = promotionReview({
+    working: { id: mintIdentity(), version: 1, statement: "s", source_requirements: [req.id] },
+    shared: { artifacts: [req], covers }
+  });
+  assert.ok(review.blocking.some((f) => f.rule === "RDLC-PRM-007"));
+});
+
+test("FEAT-006: disjoint-criteria covers are decomposition, not over-coverage (review MEDIUM)", () => {
+  const req = { id: mintIdentity(), acceptance_criteria: ["c1", "c2"] };
+  const covers = [
+    { requirement: req.id, criteria: ["c1"], item: "s1", itemState: "draft" },
+    { requirement: req.id, criteria: ["c2"], item: "s2", itemState: "draft" }
+  ];
+  assert.equal(computeCoverage({ requirements: [req], covers }).get(req.id).state, "draft-covered");
+  const overlapping = [
+    { requirement: req.id, criteria: ["c1", "c2"], item: "s1", itemState: "draft" },
+    { requirement: req.id, criteria: ["c2"], item: "s2", itemState: "draft" }
+  ];
+  assert.equal(computeCoverage({ requirements: [req], covers: overlapping }).get(req.id).state, "over-covered");
+});
+
+test("FEAT-006: promotion is bound to the reviewed version, content, and shared state (review HIGH)", () => {
+  const working = workingArtifact();
+  const shared = { artifacts: [] };
+  const review = promotionReview({ working, shared });
+  // Content mutated after review.
+  const mutated = { ...working, statement: "Changed after review." };
+  assert.throws(() => promote({ working: mutated, review }, context), /changed after its promotion review/);
+  // Version bumped after review.
+  const bumped = { ...working, version: 5 };
+  assert.throws(() => promote({ working: bumped, review }, context), /covers version/);
+  // Shared state moved after review.
+  const movedShared = { artifacts: [{ id: mintIdentity(), version: 1 }] };
+  assert.throws(() => promote({ working, review, shared: movedShared }, context), /rerun the review/);
+  // Unchanged everything promotes.
+  assert.equal(promote({ working, review, shared }, context).artifact.governance_state, "draft");
+});
+
+test("FEAT-006: source criteria liveness, semantic comparison hook, and approval staleness (review findings)", () => {
+  const criterion = mintIdentity();
+  const review = promotionReview({
+    working: {
+      id: mintIdentity(), version: 1, statement: "s",
+      source_criteria: [criterion, mintIdentity()],
+      base_approval_package: "sha256:" + "9".repeat(64)
+    },
+    shared: {
+      artifacts: [],
+      criteria: [{ id: criterion, governance_state: "superseded" }],
+      invalidatedApprovalPackages: ["sha256:" + "9".repeat(64)]
+    },
+    validators: {
+      semanticComparison: () => [
+        { message: "same actor and outcome as STORY-9", severity: "blocking" },
+        { message: "shares two business rules with STORY-4", severity: "warning" }
+      ]
+    }
+  });
+  const rules = review.findings.map((f) => f.rule);
+  assert.ok(rules.includes("RDLC-PRM-015"));
+  assert.ok(rules.includes("RDLC-PRM-016"));
+  assert.ok(rules.includes("RDLC-PRM-018"));
+  const comparisons = review.findings.filter((f) => f.rule === "RDLC-PRM-017");
+  assert.equal(comparisons.length, 2);
+  assert.equal(comparisons.filter((f) => f.severity === "blocking").length, 1);
+});

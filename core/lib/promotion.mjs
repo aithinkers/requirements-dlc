@@ -7,6 +7,7 @@
  * requirement and acceptance-criterion level.
  */
 
+import { canonicalBytes, sourceHash } from "./canonical.mjs";
 import { mintIdentity } from "./identity.mjs";
 import { transitionGovernance } from "./lifecycle.mjs";
 
@@ -101,10 +102,13 @@ export function computeCoverage({ requirements, claims = [], covers = [] }) {
     const requirementState = coverageState(relevant, claimants);
     const coveredCriteria = criteria.filter((criterion) => !["uncovered", "claimed"].includes(criterionStates[criterion]));
     const partial = criteria.length > 0 && coveredCriteria.length > 0 && coveredCriteria.length < criteria.length;
-    results.set(requirement.id, {
-      state: partial ? "partially-covered" : requirementState,
-      criteria: criterionStates
-    });
+    // Precedence (§35.4/§35.5): conflicts and undeclared duplication are never
+    // masked by partial coverage — they carry the blocking/warning signal.
+    const criterionConflict = Object.values(criterionStates).includes("conflicting-coverage");
+    let state = requirementState;
+    if (requirementState === "conflicting-coverage" || criterionConflict) state = "conflicting-coverage";
+    else if (requirementState !== "over-covered" && partial) state = "partially-covered";
+    results.set(requirement.id, { state, criteria: criterionStates });
   }
   return results;
 }
@@ -122,6 +126,12 @@ function coverageState(coverEntries, claimants) {
     const partitions = new Set(coverEntries.map((cover) => cover.partition ?? null));
     const declared = coverEntries.every((cover) => cover.partition);
     if (declared && partitions.size === coverEntries.length) return "intentionally-multiple";
+    // Disjoint-criteria covers are intentional decomposition, not duplication
+    // (§35.4: over-covered means "substantially the same scope").
+    const overlapping = coverEntries.some((a, i) =>
+      coverEntries.some((b, j) => i < j && (a.criteria ?? []).some((criterion) => (b.criteria ?? []).includes(criterion)))
+    );
+    if (!overlapping) return strongest;
     return "over-covered";
   }
   return strongest;
@@ -173,6 +183,14 @@ export function promotionReview({ working, shared, validators = {} }) {
     }
   }
 
+  for (const criterionId of working.source_criteria ?? []) {
+    const criterion = (shared.criteria ?? []).find((entry) => entry.id === criterionId);
+    if (!criterion) findings.push(finding("RDLC-PRM-015", BLOCKING, `source acceptance criterion missing: ${criterionId}`, criterionId));
+    else if (["superseded", "retired", "withdrawn"].includes(criterion.governance_state)) {
+      findings.push(finding("RDLC-PRM-016", BLOCKING, `source acceptance criterion ${criterion.governance_state}: ${criterionId}`, criterionId));
+    }
+  }
+
   // 5. Coverage against approved, shared-draft, and claimed work.
   const coverage = computeCoverage({
     requirements: shared.artifacts?.filter((artifact) => (working.source_requirements ?? []).includes(artifact.id)) ?? [],
@@ -193,6 +211,14 @@ export function promotionReview({ working, shared, validators = {} }) {
     if (artifact.id === working.id || !artifact.statement) continue;
     if (normalizeStatement(artifact.statement) === normalized) {
       findings.push(finding("RDLC-PRM-009", BLOCKING, `semantic duplicate candidate: ${artifact.id}`, artifact.id));
+    }
+  }
+
+  // 7. Actor/outcome/rule/scope/data/component/dependency/criteria comparison
+  // (delegated semantic comparison in addition to step 6's exact matching).
+  if (validators.semanticComparison) {
+    for (const entry of validators.semanticComparison(working, shared)) {
+      findings.push(finding("RDLC-PRM-017", entry.severity === "blocking" ? BLOCKING : WARNING, `comparison: ${entry.message}`, entry.subject ?? working.id));
     }
   }
 
@@ -231,12 +257,23 @@ export function promotionReview({ working, shared, validators = {} }) {
     findings.push(finding("RDLC-PRM-014", BLOCKING, `baseline changed since drafting began: ${working.base_baseline} -> ${shared.currentBaseline}`, working.id));
   }
 
+  // 12b. Approval staleness: drafting began against a package that was invalidated.
+  if (working.base_approval_package && (shared.invalidatedApprovalPackages ?? []).includes(working.base_approval_package)) {
+    findings.push(finding("RDLC-PRM-018", BLOCKING, `base approval package was invalidated: ${working.base_approval_package}`, working.id));
+  }
+
   // 13. The review record.
+  const sharedHash = sourceHash(canonicalBytes({
+    baseline: shared.currentBaseline ?? null,
+    artifacts: (shared.artifacts ?? []).map((artifact) => ({ id: artifact.id, version: artifact.version ?? null, content_hash: artifact.content_hash ?? null }))
+  }, { artifacts: ["id"] })).hash;
   return {
     schema_version: "rdlc.promotion-review/v0.2",
     id: mintIdentity(),
     working: working.id,
-    reviewed_against: { baseline: shared.currentBaseline ?? null, artifact_count: shared.artifacts?.length ?? 0 },
+    working_version: working.version,
+    working_statement_hash: sourceHash(canonicalBytes({ statement: working.statement ?? null })).hash,
+    reviewed_against: { baseline: shared.currentBaseline ?? null, artifact_count: shared.artifacts?.length ?? 0, shared_hash: sharedHash },
     findings,
     blocking: findings.filter((entry) => entry.severity === BLOCKING),
     coverage: Object.fromEntries(coverage),
@@ -249,12 +286,28 @@ export function promotionReview({ working, shared, validators = {} }) {
  * The original capture is preserved unrewritten; the promotion diff and
  * review travel in the result.
  */
-export function promote({ working, capture, review }, context) {
+export function promote({ working, capture, review, shared }, context) {
   if (!review?.passed) {
     throw new PromotionError("promotion requires a passing promotion review (§35.3)");
   }
   if (review.working !== working.id) {
     throw new PromotionError("promotion review does not cover this working artifact");
+  }
+  if (review.working_version !== working.version) {
+    throw new PromotionError(`promotion review covers version ${review.working_version}, not ${working.version} (§35.7)`);
+  }
+  const statementHash = sourceHash(canonicalBytes({ statement: working.statement ?? null })).hash;
+  if (review.working_statement_hash !== statementHash) {
+    throw new PromotionError("working content changed after its promotion review (§35.3, §35.7)");
+  }
+  if (shared) {
+    const sharedHash = sourceHash(canonicalBytes({
+      baseline: shared.currentBaseline ?? null,
+      artifacts: (shared.artifacts ?? []).map((artifact) => ({ id: artifact.id, version: artifact.version ?? null, content_hash: artifact.content_hash ?? null }))
+    }, { artifacts: ["id"] })).hash;
+    if (sharedHash !== review.reviewed_against.shared_hash) {
+      throw new PromotionError("shared state changed since the promotion review; rerun the review (§35.3 step 1)");
+    }
   }
   const { artifact, audit } = transitionGovernance(working, "draft", {
     ...context,
