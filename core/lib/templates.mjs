@@ -33,12 +33,14 @@ export function resolveTemplate(packs) {
     for (const [name, definition] of Object.entries(pack.fields ?? {})) {
       const existing = fields[name];
       if (existing?.locked) {
-        const removesConstraint = (key) => key in definition && (definition[key] === null || definition[key] === undefined || definition[key] === false) && Boolean(existing[key]);
+        // §18.3 robustness: any redefinition that is not strictly `true` for a
+        // locked requirement, or not a subset array for locked allowed
+        // values, is a weakening — regardless of the literal used.
         const weakens =
-          removesConstraint("required") ||
-          removesConstraint("allowed_values") ||
-          (existing.allowed_values && Array.isArray(definition.allowed_values) &&
-            !definition.allowed_values.every((value) => existing.allowed_values.includes(value)));
+          ("required" in definition && existing.required === true && definition.required !== true) ||
+          ("allowed_values" in definition && Array.isArray(existing.allowed_values) &&
+            (!Array.isArray(definition.allowed_values) ||
+              !definition.allowed_values.every((value) => existing.allowed_values.includes(value))));
         if (weakens || definition.locked === false) {
           throw new TemplateError(
             `pack ${pack.level}@${pack.version} attempts to weaken locked field "${name}" from ${provenance[name].level}@${provenance[name].version} (§18.3)`
@@ -69,8 +71,12 @@ export function validateAgainstTemplate(artifact, resolved) {
     if (definition.required && (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0))) {
       failures.push(`required field missing: ${name}`);
     }
-    if (definition.allowed_values && value !== undefined && value !== null && !definition.allowed_values.includes(value)) {
-      failures.push(`field ${name} has a value outside its allowed set: ${value}`);
+    if ("allowed_values" in definition && definition.allowed_values !== undefined && definition.allowed_values !== null) {
+      if (!Array.isArray(definition.allowed_values)) {
+        failures.push(`template defect: allowed_values for ${name} is not an array`);
+      } else if (value !== undefined && value !== null && !definition.allowed_values.includes(value)) {
+        failures.push(`field ${name} has a value outside its allowed set: ${value}`);
+      }
     }
   }
   return failures;

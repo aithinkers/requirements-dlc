@@ -37,7 +37,6 @@ export function createRaidRecord({ type, statement, owner, sources = [], affecte
     if (value === undefined || value === null || (typeof value === "string" && !value.trim())) {
       throw new RaidError(`a ${type} requires ${field} (§23.2)`);
     }
-    void 0;
   }
   return {
     schema_version: "rdlc.raid/v0.2",

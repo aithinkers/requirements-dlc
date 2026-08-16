@@ -311,3 +311,22 @@ test("REL-002/fixes: locked-field null bypass closed; unknown-profile rollUp ref
   const suggestion = suggest({ name: "X", componentClass: "product-area", responsibility: "r", causedBy: [mintIdentity()], confidence: "low" });
   assert.throws(() => advance(suggestion, "candidate", { actorKind: "ai" }), /human decision at every step/);
 });
+
+test("REL-002/templates: locked-field weakening is rejected for arbitrary literals (review HIGH-1 probes)", () => {
+  const lockedPacks = (override) => [
+    { level: "organization", version: "o/v1", fields: { priority: { locked: true, required: true, allowed_values: ["a", "b"] } } },
+    { level: "project", version: "p/v1", fields: { priority: override } }
+  ];
+  for (const override of [
+    { required: 0 }, { required: "no" }, { required: null }, { required: false },
+    { allowed_values: "abcdefz" }, { allowed_values: null }, { allowed_values: 7 }, { allowed_values: ["z"] }
+  ]) {
+    assert.throws(() => resolveTemplate(lockedPacks(override)), /weaken locked field/, JSON.stringify(override));
+  }
+  // Strict tightening still passes.
+  const tightened = resolveTemplate(lockedPacks({ required: true, allowed_values: ["a"] }));
+  assert.deepEqual(tightened.fields.priority.allowed_values, ["a"]);
+  // The validator refuses corrupt allowed_values instead of coercing membership.
+  const corrupt = { fields: { priority: { allowed_values: "abcdefz" } }, provenance: {}, locked: {} };
+  assert.ok(validateAgainstTemplate({ priority: "z" }, corrupt).some((failure) => /template defect/.test(failure)));
+});
