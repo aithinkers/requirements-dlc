@@ -209,10 +209,14 @@
         "§27",
         "§41.1"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/lib/approval.mjs"
+        ],
+        "tests": [
+          "tests/governance/approval.test.mjs"
+        ]
       }
     },
     {
