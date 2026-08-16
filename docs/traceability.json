@@ -132,10 +132,14 @@
         "§14",
         "§27.7"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/lib/lifecycle.mjs"
+        ],
+        "tests": [
+          "tests/governance/lifecycle.test.mjs"
+        ]
       }
     },
     {
