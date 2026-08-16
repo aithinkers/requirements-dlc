@@ -377,6 +377,9 @@ export class JiraConnector {
    */
   /** Derive a valid JQL `updated >=` operand ("yyyy-MM-dd HH:mm") from a provider revision. */
   static jqlWatermark(revision, fallback) {
+    // Only ISO-dated revisions may move the watermark; an id-fallback revision
+    // must never corrupt it (review residual: year-99999 watermark).
+    if (!/^\d{4}-\d{2}-\d{2}/.test(String(revision))) return fallback;
     const parsed = new Date(String(revision).replace(" ", "T"));
     if (Number.isNaN(parsed.getTime())) return fallback;
     const pad = (value) => String(value).padStart(2, "0");
@@ -426,7 +429,11 @@ export class JiraConnector {
         ...working,
         startAt: morePages ? startAt : 0,
         watermark: nextWatermark,
-        seen: [...seen].filter((entry) => entry.split("@")[1] >= nextWatermark || [...seen].length <= 10000).slice(-10000),
+        seen: (() => {
+          const entries = [...seen];
+          if (entries.length <= 10000) return entries;
+          return entries.filter((entry) => entry.split("@")[1] >= nextWatermark).slice(-10000);
+        })(),
         last_success_at: this.#now(),
         failure_state: null
       };

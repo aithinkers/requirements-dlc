@@ -306,3 +306,8 @@ test("FEAT-010: status changes go through the transitions endpoint (review MEDIU
   assert.equal(result.receipts[0].result, "transitioned:31");
   assert.deepEqual(CAPABILITIES.deferred.includes("webhooks"), true, "§30 deferrals declared");
 });
+
+test("FEAT-010: an id-fallback revision never corrupts the watermark (review residual)", () => {
+  assert.equal(JiraConnector.jqlWatermark("99999", "2026-08-15 18:00"), "2026-08-15 18:00");
+  assert.equal(JiraConnector.jqlWatermark("2026-08-15T18:30:00.000+0000", "x"), "2026-08-15 18:30");
+});
