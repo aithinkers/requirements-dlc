@@ -301,14 +301,14 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
     // Scaffold memory files from templates when absent (user content after that).
     for (const memory of ["organization.md", "project.md", "team.md"]) {
       const destination = join(target, "rdlc", "spaces", "main", "memory", memory);
-      try { await stat(destination); } catch {
-        const source = join(packageRoot, "distribution", tool === "claude-code" ? "claude-code" : tool, "reference", "memory-templates", memory);
-        try {
-          await mkdir(dirname(destination), { recursive: true });
-          await writeFile(destination, await readFile(source));
-          results.scaffolded.push(join("rdlc", "spaces", "main", "memory", memory));
-        } catch { /* host without templates */ }
-      }
+      const source = join(packageRoot, "distribution", tool === "claude-code" ? "claude-code" : tool, "reference", "memory-templates", memory);
+      try {
+        // Exclusive create: never clobbers user content, no check-then-write race.
+        const content = await readFile(source);
+        await mkdir(dirname(destination), { recursive: true });
+        await writeFile(destination, content, { flag: "wx" });
+        results.scaffolded.push(join("rdlc", "spaces", "main", "memory", memory));
+      } catch { /* already present, or host without templates */ }
     }
     // Migrate away the 0.1.1 layout Claude Code never discovered (issue #34).
     const legacy = join(target, ".claude", "plugins", "rdlc");
