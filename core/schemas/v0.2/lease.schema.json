@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rdlc.dev/schemas/v0.2/lease.schema.json",
+  "title": "R-DLC mutation lease record (spec §35.9)",
+  "type": "object",
+  "required": ["schema_version", "id", "resource", "purpose", "holder", "authority", "acquired_at", "expires_at", "status"],
+  "properties": {
+    "schema_version": { "const": "rdlc.lease/v0.2" },
+    "id": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "resource": { "type": "string", "pattern": "^[a-z][a-z0-9+.-]*://\\S+$" },
+    "purpose": {
+      "enum": [
+        "allocate-display-aliases", "publish-baseline", "finalize-approval-package",
+        "migrate", "recover-connector-cursor"
+      ]
+    },
+    "holder": {
+      "type": "object",
+      "required": ["principal"],
+      "properties": {
+        "principal": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+        "host": { "type": "string", "minLength": 1 },
+        "session": { "type": "string", "minLength": 1 },
+        "workstream": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "authority": {
+      "enum": ["git-ref-compare-and-swap", "provider-conditional-create", "protected-branch-record"]
+    },
+    "fencing_token": { "type": "string", "pattern": "^[0-9]{8,}$" },
+    "base_hash": { "$ref": "common.schema.json#/$defs/sha256" },
+    "acquired_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+    "heartbeat_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+    "expires_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+    "status": { "enum": ["active", "released", "expired", "broken"] }
+  },
+  "additionalProperties": false
+}

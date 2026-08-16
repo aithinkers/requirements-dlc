@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rdlc.dev/schemas/v0.2/project.schema.json",
+  "title": "R-DLC project manifest (spec §11.1)",
+  "type": "object",
+  "required": ["schema_version", "project"],
+  "properties": {
+    "schema_version": { "const": "rdlc.project/v0.2" },
+    "project": {
+      "type": "object",
+      "required": ["id", "title", "default_space", "authority_mode"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "default_space": { "type": "string", "minLength": 1 },
+        "authority_mode": { "enum": ["files-authoritative", "tracker-authoritative", "governed-bidirectional"] }
+      },
+      "additionalProperties": false
+    },
+    "inputs": { "type": "object" },
+    "knowledge": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": { "enabled": { "type": "boolean" } },
+      "additionalProperties": true
+    },
+    "company_setup": { "type": "object" },
+    "taxonomy": {
+      "type": "object",
+      "properties": {
+        "hierarchy": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["portfolio-epic", "initiative", "epic", "capability", "feature", "story", "task"]
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "templates": { "type": "object" },
+    "approval": { "type": "object" },
+    "collaboration": {
+      "type": "object",
+      "properties": {
+        "lease_authority": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": { "enum": ["git-ref-compare-and-swap", "provider-conditional-create", "protected-branch-record"] },
+            "remote": { "type": "string" },
+            "ref_namespace": { "type": "string", "pattern": "^refs/rdlc/" }
+          },
+          "additionalProperties": false
+        },
+        "alias_authority": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "estimation": { "type": "object" },
+    "connectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "provider", "write_mode"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "provider": { "type": "string", "minLength": 1 },
+          "mapping": { "type": "string", "minLength": 1 },
+          "write_mode": { "enum": ["read-only", "propose", "approve-each-batch", "approved-automation"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "external_content": { "const": "untrusted" },
+        "secrets_provider": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

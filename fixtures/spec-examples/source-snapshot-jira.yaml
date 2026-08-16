@@ -1,0 +1,13 @@
+schema_version: rdlc.source-snapshot/v0.2
+id: urn:uuid:0198ba10-64f2-70a1-9c35-2d4e6f8091a3
+provider: jira
+organization: example.atlassian.net
+project: COM
+item_id: COM-42
+subresource: comment:10017
+revision: "2026-08-15T14:31:22Z"
+author: jira-account:abc123
+created_at: 2026-08-15T14:20:00Z
+retrieved_at: 2026-08-15T14:32:00Z
+source_hash: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+source_url: https://example.atlassian.net/browse/COM-42

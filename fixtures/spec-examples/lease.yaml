@@ -1,0 +1,16 @@
+schema_version: rdlc.lease/v0.2
+id: urn:uuid:0198b9b0-103a-74c6-8912-1a2b3c4d5e6f
+resource: alias-authority://commerce/requirement
+purpose: allocate-display-aliases
+holder:
+  principal: urn:uuid:0198b7c0-2d5e-7f31-9a43-2c8e5b6a7012
+  host: codex
+  session: session-913
+  workstream: checkout-recovery-stories
+authority: provider-conditional-create
+fencing_token: "00000042"
+base_hash: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acquired_at: 2026-08-15T19:02:00Z
+heartbeat_at: 2026-08-15T19:02:30Z
+expires_at: 2026-08-15T19:04:00Z
+status: active

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rdlc.dev/schemas/v0.2/principal.schema.json",
+  "title": "R-DLC canonical principal and verified bindings (spec §27.2)",
+  "type": "object",
+  "required": ["schema_version", "id", "display_name", "kind", "status"],
+  "properties": {
+    "schema_version": { "const": "rdlc.principal/v0.2" },
+    "id": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "display_name": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["human", "automation"] },
+    "status": { "enum": ["active", "suspended", "retired"] },
+    "roles": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["provider", "connection", "account_id", "verified_via", "verified_by", "verified_at", "status"],
+        "properties": {
+          "provider": { "type": "string", "minLength": 1 },
+          "connection": { "type": "string", "minLength": 1 },
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "account_id": { "type": "string", "minLength": 1 },
+          "verified_via": {
+            "enum": ["authenticated-self-binding", "directory-synchronization", "administrator-attestation"]
+          },
+          "verified_by": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+          "verified_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+          "expires_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+          "status": { "enum": ["verified", "revoked", "expired"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

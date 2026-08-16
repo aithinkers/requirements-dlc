@@ -67,10 +67,23 @@
         "§13",
         "§16.1"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/schemas/v0.2/common.schema.json",
+          "core/schemas/v0.2/artifact.schema.json",
+          "core/schemas/v0.2/source-snapshot.schema.json",
+          "core/schemas/v0.2/principal.schema.json",
+          "core/schemas/v0.2/finding.schema.json",
+          "core/schemas/v0.2/work-claim.schema.json",
+          "core/schemas/v0.2/lease.schema.json",
+          "core/schemas/v0.2/changeset.schema.json",
+          "core/schemas/v0.2/project.schema.json",
+          "core/schemas/v0.2/index.mjs"
+        ],
+        "tests": [
+          "tests/governance/schemas.test.mjs"
+        ]
       }
     },
     {

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rdlc.dev/schemas/v0.2/common.schema.json",
+  "title": "R-DLC common definitions (spec §12)",
+  "$defs": {
+    "uuidUrn": {
+      "type": "string",
+      "pattern": "^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Canonical UUIDv7 URN identity (§12.1)."
+    },
+    "displayAlias": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*-[A-Za-z0-9-]+$",
+      "description": "Human-readable display alias such as REQ-104 (§12.2). Never a canonical identity."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "Lowercase SHA-256 hash encoding (§12.5)."
+    },
+    "rfc3339Utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "description": "RFC 3339 instant normalized to UTC with Z suffix (§12.6)."
+    },
+    "governanceState": {
+      "enum": [
+        "captured", "triaged", "working", "draft", "reviewed",
+        "ready-for-approval", "awaiting-approval", "approved", "baselined",
+        "collision-review", "needs-clarification", "deferred", "rejected",
+        "superseded", "retired", "withdrawn"
+      ],
+      "description": "Governance lifecycle states and conditions (§14.1.1)."
+    },
+    "synchronizationState": {
+      "enum": ["not-synchronized", "planned", "applying", "synchronized", "drifted", "failed", "uncertain"],
+      "description": "Synchronization states (§14.1.1)."
+    },
+    "verificationProgress": {
+      "enum": ["not-designed", "designed", "reviewed", "implemented", "executed"],
+      "description": "Verification progress states (§14.1)."
+    },
+    "verificationOutcome": {
+      "enum": ["none", "passed", "failed", "blocked", "inconclusive", "waived"],
+      "description": "Verification outcomes (§14.1)."
+    },
+    "relationshipType": {
+      "enum": [
+        "derives-from", "decomposes", "satisfies", "implements", "validated-by",
+        "tested-by", "evidenced-by", "affects", "owned-by", "depends-on",
+        "blocks", "conflicts-with", "overlaps", "duplicates", "supersedes",
+        "mitigates", "resolves", "approves"
+      ],
+      "description": "Core relationship types (§13)."
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["type", "target"],
+      "properties": {
+        "type": { "$ref": "#/$defs/relationshipType" },
+        "target": { "$ref": "#/$defs/uuidUrn" },
+        "status": { "enum": ["candidate", "accepted", "rejected", "superseded"] },
+        "origin": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 },
+        "creator": { "$ref": "#/$defs/uuidUrn" },
+        "created_at": { "$ref": "#/$defs/rfc3339Utc" },
+        "confidence": { "enum": ["low", "medium", "high"] }
+      },
+      "additionalProperties": false,
+      "description": "Typed relationship record (§13). Targets must be canonical UUID URNs, never display aliases (§12.2)."
+    },
+    "sourceReference": {
+      "type": "string",
+      "pattern": "^(kb|external|req)://\\S+$",
+      "description": "Stable evidence reference such as kb://… or external://… (§12.3, §16)."
+    },
+    "actorReference": {
+      "anyOf": [
+        { "$ref": "#/$defs/uuidUrn" },
+        { "type": "string", "pattern": "^role:[a-z][a-z0-9-]*$" }
+      ],
+      "description": "Canonical principal URN or role reference."
+    }
+  }
+}

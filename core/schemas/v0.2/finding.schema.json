@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rdlc.dev/schemas/v0.2/finding.schema.json",
+  "title": "R-DLC review finding (spec §24.3)",
+  "type": "object",
+  "required": ["schema_version", "id", "rule", "severity", "artifact", "message", "status"],
+  "properties": {
+    "schema_version": { "const": "rdlc.finding/v0.2" },
+    "id": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "display_id": { "$ref": "common.schema.json#/$defs/displayAlias" },
+    "rule": { "type": "string", "pattern": "^RDLC-[A-Z]+-[0-9]{3}$" },
+    "severity": { "enum": ["info", "advisory", "warning", "blocking"] },
+    "artifact": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "artifact_display_id": { "$ref": "common.schema.json#/$defs/displayAlias" },
+    "location": { "type": "string", "minLength": 1 },
+    "message": { "type": "string", "minLength": 1 },
+    "evidence": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/sourceReference" }
+    },
+    "confidence": { "enum": ["low", "medium", "high"] },
+    "suggested_action": { "type": "string" },
+    "status": { "enum": ["open", "resolved", "accepted", "challenged", "waived"] }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,16 @@
+schema_version: rdlc.principal/v0.2
+id: urn:uuid:0198b7c0-2d5e-7f31-9a43-2c8e5b6a7012
+display_name: Alex Morgan
+kind: human
+status: active
+roles:
+  - product-owner
+bindings:
+  - provider: jira
+    connection: delivery-jira
+    tenant_id: 3f9c2a10
+    account_id: abc123-immutable-provider-id
+    verified_via: authenticated-self-binding
+    verified_by: urn:uuid:0198b7c0-2d5e-7f31-9a43-2c8e5b6a7012
+    verified_at: 2026-08-15T17:40:00Z
+    status: verified

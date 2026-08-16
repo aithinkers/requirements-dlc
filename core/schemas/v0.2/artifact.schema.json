@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rdlc.dev/schemas/v0.2/artifact.schema.json",
+  "title": "R-DLC governed artifact envelope (spec §12.3)",
+  "type": "object",
+  "required": [
+    "schema_version", "id", "project", "type", "title",
+    "governance_state", "version", "origin", "created_at", "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "rdlc.artifact/v0.2" },
+    "id": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "display_id": { "$ref": "common.schema.json#/$defs/displayAlias" },
+    "project": { "type": "string", "minLength": 1 },
+    "type": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "governance_state": { "$ref": "common.schema.json#/$defs/governanceState" },
+    "synchronization_state": { "$ref": "common.schema.json#/$defs/synchronizationState" },
+    "verification_progress": { "$ref": "common.schema.json#/$defs/verificationProgress" },
+    "verification_outcome": { "$ref": "common.schema.json#/$defs/verificationOutcome" },
+    "version": { "type": "integer", "minimum": 1 },
+    "origin": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["user-capture", "import", "ai-candidate", "deterministic-derivation", "migration"]
+        },
+        "actor": { "$ref": "common.schema.json#/$defs/actorReference" },
+        "captured_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" }
+      },
+      "additionalProperties": false
+    },
+    "statement": { "type": "string", "minLength": 1 },
+    "rationale": { "type": "string" },
+    "owner": { "$ref": "common.schema.json#/$defs/actorReference" },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/sourceReference" }
+    },
+    "relationships": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/relationship" }
+    },
+    "external_refs": { "type": "array", "items": { "type": "object" } },
+    "content_hash": { "$ref": "common.schema.json#/$defs/sha256" },
+    "created_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" }
+  },
+  "additionalProperties": true,
+  "x-rdlc-governed": [
+    "type", "title", "statement", "rationale", "owner",
+    "sources", "relationships"
+  ],
+  "x-rdlc-set-keys": { "relationships": ["type", "target"], "sources": null }
+}

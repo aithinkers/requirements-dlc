@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rdlc.dev/schemas/v0.2/changeset.schema.json",
+  "title": "R-DLC connector changeset (spec §33.1)",
+  "type": "object",
+  "required": ["schema_version", "id", "connection", "created_by", "created_at", "mode", "operations", "approval"],
+  "properties": {
+    "schema_version": { "const": "rdlc.changeset/v0.2" },
+    "id": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "display_id": { "$ref": "common.schema.json#/$defs/displayAlias" },
+    "connection": { "type": "string", "minLength": 1 },
+    "created_by": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+    "created_at": { "$ref": "common.schema.json#/$defs/rfc3339Utc" },
+    "mode": { "enum": ["read-only", "propose", "approve-each-batch", "approved-automation"] },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["operation_id", "action"],
+        "properties": {
+          "operation_id": { "type": "string", "pattern": "^op-[0-9]{3,}$" },
+          "action": {
+            "enum": ["create", "update", "link", "unlink", "comment", "transition", "set-fields", "attach"]
+          },
+          "artifact": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+          "source": { "$ref": "common.schema.json#/$defs/uuidUrn" },
+          "target": {},
+          "relation": { "type": "string", "minLength": 1 },
+          "idempotency_key": { "type": "string", "pattern": "^rdlc:[0-9a-f-]{36}$" },
+          "preconditions": { "type": "object" },
+          "fields": { "type": "object" }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": { "properties": { "action": { "const": "create" } } },
+            "then": { "required": ["artifact", "target", "idempotency_key"] }
+          },
+          {
+            "if": { "properties": { "action": { "const": "link" } } },
+            "then": { "required": ["source", "relation", "target"] }
+          }
+        ]
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": ["required", "status"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "status": { "enum": ["pending", "approved", "rejected", "not-required"] },
+        "package_hash": { "$ref": "common.schema.json#/$defs/sha256" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
