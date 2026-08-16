@@ -64,6 +64,10 @@ async function listPluginFiles(tool) {
     for (const relative of await walk(join(base, "reference"))) {
       files.push({ source: join(base, "reference", relative), relative: join("rdlc", "reference", relative) });
     }
+    for (const relative of await walk(join(base, "hooks"))) {
+      if (relative === "hooks.json") continue; // merged into settings below
+      files.push({ source: join(base, "hooks", relative), relative: join("rdlc", "hooks", relative) });
+    }
     return files;
   }
   // Codex and Kiro surfaces install their dot-directory trees verbatim
@@ -192,10 +196,15 @@ const SCAFFOLD_DIRECTORIES = [
   "rdlc/spaces/main/engagements"
 ];
 
-async function fileState(path, expected) {
+async function fileState(path, expected, installedHash) {
   try {
     const current = await readFile(path);
-    return sha256(current) === sha256(expected) ? "unchanged" : "modified";
+    const currentHash = sha256(current);
+    if (currentHash === sha256(expected)) return "unchanged";
+    // Upgrade-aware protection: a file still matching what R-DLC installed
+    // last time was never touched by the user — new versions apply cleanly.
+    if (installedHash && currentHash === installedHash) return "upgradeable";
+    return "modified";
   } catch {
     return "absent";
   }
@@ -211,18 +220,25 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
   }
   if (!targetStat.isDirectory()) throw new Error(`target is not a directory: ${target}`);
 
+  const manifestPath = join(target, "rdlc", ".install-manifest.json");
+  let installManifest = {};
+  try { installManifest = JSON.parse(await readFile(manifestPath, "utf8")).files ?? {}; } catch { /* first install */ }
   const plan = await listPluginFiles(tool);
   const projectId = basename(resolve(target)) || "rdlc-project";
   plan.push({ content: projectManifest(projectId), relative: "requirements-project.yaml" });
   plan.push({ content: EXAMPLE_MAPPING, relative: join("config", "connectors", "jira-example.yaml") });
   plan.push({ content: ADO_EXAMPLE_MAPPING, relative: join("config", "connectors", "azure-devops-example.yaml") });
 
+  const newManifest = {};
   for (const entry of plan) {
     const destination = join(target, entry.relative);
     const expected = entry.content !== undefined ? Buffer.from(entry.content) : await readFile(entry.source);
-    const state = await fileState(destination, expected);
+    const expectedHash = sha256(expected);
+    const state = await fileState(destination, expected, installManifest[entry.relative]);
+    newManifest[entry.relative] = expectedHash;
     if (check) {
-      if (state !== "unchanged") results.drift.push({ file: entry.relative, state });
+      if (state === "modified") results.drift.push({ file: entry.relative, state });
+      if (state === "absent" || state === "upgradeable") results.drift.push({ file: entry.relative, state });
       continue;
     }
     if (state === "unchanged") {
@@ -230,16 +246,65 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
       continue;
     }
     if (state === "modified" && !force) {
-      // Never clobber a user-modified file silently.
+      // The user changed this file since we installed it — never clobber.
       results.protected.push(entry.relative);
+      newManifest[entry.relative] = installManifest[entry.relative] ?? expectedHash;
       continue;
     }
     await mkdir(dirname(destination), { recursive: true });
     await writeFile(destination, expected);
-    results.installed.push(entry.relative);
+    (state === "upgradeable" ? (results.upgraded ??= []) : results.installed).push(entry.relative);
+  }
+  if (!check) {
+    await mkdir(dirname(manifestPath), { recursive: true });
+    await writeFile(manifestPath, JSON.stringify({ schema_version: "rdlc.install-manifest/v1", files: newManifest }, null, 2) + "\n");
   }
 
+  if (!check && tool === "claude-code") {
+    // Session hooks: create or merge .claude/settings.json — never touching
+    // hooks that are not ours (issue #48).
+    const settingsPath = join(target, ".claude", "settings.json");
+    let settings = {};
+    let settingsReadable = true;
+    try { settings = JSON.parse(await readFile(settingsPath, "utf8")); } catch (error) {
+      if (error?.code !== "ENOENT") settingsReadable = false;
+    }
+    if (settingsReadable) {
+      const ours = JSON.parse(await readFile(join(packageRoot, "distribution", "claude-code", "hooks", "hooks.json"), "utf8")).hooks;
+      settings.hooks ??= {};
+      let merged = false;
+      for (const [event, entries] of Object.entries(ours)) {
+        settings.hooks[event] ??= [];
+        for (const entry of entries) {
+          const marker = entry.hooks[0].command;
+          if (!JSON.stringify(settings.hooks[event]).includes(marker)) {
+            settings.hooks[event].push(entry);
+            merged = true;
+          }
+        }
+      }
+      if (merged) {
+        await mkdir(dirname(settingsPath), { recursive: true });
+        await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+        results.hooks_merged = true;
+      }
+    } else {
+      results.hooks_skipped = "existing .claude/settings.json could not be parsed; hooks not merged";
+    }
+  }
   if (!check) {
+    // Scaffold memory files from templates when absent (user content after that).
+    for (const memory of ["organization.md", "project.md", "team.md"]) {
+      const destination = join(target, "rdlc", "spaces", "main", "memory", memory);
+      try { await stat(destination); } catch {
+        const source = join(packageRoot, "distribution", tool === "claude-code" ? "claude-code" : tool, "reference", "memory-templates", memory);
+        try {
+          await mkdir(dirname(destination), { recursive: true });
+          await writeFile(destination, await readFile(source));
+          results.scaffolded.push(join("rdlc", "spaces", "main", "memory", memory));
+        } catch { /* host without templates */ }
+      }
+    }
     // Migrate away the 0.1.1 layout Claude Code never discovered (issue #34).
     const legacy = join(target, ".claude", "plugins", "rdlc");
     try {
@@ -264,7 +329,9 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
   if (check) {
     log(results.drift.length === 0 ? "  up to date" : results.drift.map((entry) => `  drift: ${entry.file} (${entry.state})`).join("\n"));
   } else {
-    log(`  installed: ${results.installed.length}, unchanged: ${results.skipped.length}, scaffolded: ${results.scaffolded.length}`);
+    log(`  installed: ${results.installed.length}, upgraded: ${results.upgraded?.length ?? 0}, unchanged: ${results.skipped.length}, scaffolded: ${results.scaffolded.length}`);
+    if (results.hooks_merged) log("  session hooks added to .claude/settings.json (orientation + write guard)");
+    if (results.hooks_skipped) log(`  NOTE: ${results.hooks_skipped}`);
     if (results.migrated) log(`  migrated: removed undiscovered legacy install at ${results.migrated}`);
     for (const file of results.protected) {
       log(`  PROTECTED (user-modified, use --force to overwrite): ${file}`);

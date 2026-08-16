@@ -522,6 +522,33 @@
           "tests/governance/engagement.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-020",
+      "title": "Human-first runtime — sensors, session hooks, memory, stage guides, upgrade-aware install",
+      "issue": 48,
+      "specification_sections": [
+        "§15",
+        "§34",
+        "§7.2",
+        "§42",
+        "§36"
+      ],
+      "status": "verified",
+      "evidence": {
+        "implementation": [
+          "core/lib/sensors.mjs",
+          "core/hooks/orient.mjs",
+          "core/hooks/guard.mjs",
+          "core/memory/organization.md",
+          "core/stages/bodies/readiness-approval.md",
+          "scripts/run-sensors.mjs",
+          "scripts/setup.mjs"
+        ],
+        "tests": [
+          "tests/governance/human-runtime.test.mjs"
+        ]
+      }
     }
   ]
 }

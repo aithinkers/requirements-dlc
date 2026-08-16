@@ -153,14 +153,33 @@ expected.set(
 // installer places it at rdlc/reference/ so command bodies can cite it.
 const protocol = await readFile("core/protocols/stage-protocol.md", "utf8");
 const stagesJson = await readFile("core/stages/stages.json", "utf8");
-const scopeFiles = (await readdir("core/scopes")).sort();
+const scopeFiles = (await readdir("core/scopes")).filter((name) => name.endsWith(".md")).sort();
+const stageGuides = (await readdir("core/stages/bodies")).sort();
+const memoryFiles = (await readdir("core/memory")).sort();
 for (const host of ["claude-code", "codex", "kiro", "kiro-ide"]) {
   expected.set(join(host, "reference", "stage-protocol.md"), protocol);
   expected.set(join(host, "reference", "stages.json"), stagesJson);
   for (const scope of scopeFiles) {
     expected.set(join(host, "reference", "scopes", scope), await readFile(join("core", "scopes", scope), "utf8"));
   }
+  for (const guide of stageGuides) {
+    expected.set(join(host, "reference", "stages", guide), await readFile(join("core", "stages", "bodies", guide), "utf8"));
+  }
+  for (const memory of memoryFiles) {
+    expected.set(join(host, "reference", "memory-templates", memory), await readFile(join("core", "memory", memory), "utf8"));
+  }
 }
+
+// Session hooks ship with the Claude Code surface only (host hook support).
+for (const hook of (await readdir("core/hooks")).sort()) {
+  expected.set(join("claude-code", "hooks", hook), await readFile(join("core", "hooks", hook), "utf8"));
+}
+expected.set(join("claude-code", "hooks", "hooks.json"), JSON.stringify({
+  hooks: {
+    SessionStart: [{ hooks: [{ type: "command", command: "node rdlc/hooks/orient.mjs" }] }],
+    PreToolUse: [{ matcher: "Write|Edit", hooks: [{ type: "command", command: "node rdlc/hooks/guard.mjs" }] }]
+  }
+}, null, 2) + "\n");
 
 // Codex adapter (§36): custom prompts plus md+toml role agents (K-DLC parity).
 expected.set(join("codex", "AGENTS.md"), HOST_OVERVIEW("Codex CLI"));
@@ -207,7 +226,11 @@ const GENERATED_DIRECTORIES = [
   join("claude-code", "commands"), join("claude-code", "agents"), join("claude-code", ".claude-plugin"),
   join("codex", ".codex", "prompts"), join("codex", ".codex", "agents"),
   join("kiro", ".kiro", "agents"), join("kiro-ide", ".kiro", "agents"),
-  ...["claude-code", "codex", "kiro", "kiro-ide"].flatMap((host) => [join(host, "reference"), join(host, "reference", "scopes")])
+  ...["claude-code", "codex", "kiro", "kiro-ide"].flatMap((host) => [
+    join(host, "reference"), join(host, "reference", "scopes"),
+    join(host, "reference", "stages"), join(host, "reference", "memory-templates")
+  ]),
+  join("claude-code", "hooks")
 ];
 
 async function sweepSkills(host, failures) {
