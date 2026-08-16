@@ -152,10 +152,14 @@
         "§35.4",
         "§13"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/lib/promotion.mjs"
+        ],
+        "tests": [
+          "tests/governance/promotion.test.mjs"
+        ]
       }
     },
     {
