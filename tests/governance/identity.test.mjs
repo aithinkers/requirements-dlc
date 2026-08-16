@@ -125,3 +125,20 @@ test("FEAT-004: a recycled alias is detected as ambiguous and fails closed", asy
   await backend.compareAndSwap(version, corrupted);
   await assert.rejects(authority.resolve("REQ-1"), /ambiguous or recycled/);
 });
+
+test("FEAT-004: supersede reserves numeric replacements and rejects rebinding (review findings)", async () => {
+  const authority = new AliasAuthority(new InMemoryCasBackend());
+  const p = mintIdentity();
+  const q = mintIdentity();
+  await authority.allocate("REQ", p); // REQ-1
+  await authority.supersede("REQ-1", "REQ-2", p);
+  // Counter must have advanced past the reserved replacement.
+  assert.equal(await authority.allocate("REQ", q), "REQ-3");
+  // An already-bound replacement is rejected, not clobbered.
+  await assert.rejects(authority.supersede("REQ-3", "REQ-2", q), /already bound/);
+  // A superseded alias cannot be superseded again.
+  await assert.rejects(authority.supersede("REQ-1", "REQ-9", p), /not active/);
+  // Format validation applies to replacements.
+  await assert.rejects(authority.supersede("REQ-3", "req-x", q), IdentityError);
+  await assert.rejects(authority.supersede("REQ-3", "REQ-3", q), IdentityError);
+});

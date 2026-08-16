@@ -175,10 +175,25 @@ export class AliasAuthority {
 
   /** Retire an alias when a new one supersedes it; history keeps both (§12.2). */
   async supersede(alias, replacementAlias, artifactUrn) {
+    if (typeof replacementAlias !== "string" || !/^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-?\d*$/.test(replacementAlias) || replacementAlias === alias) {
+      throw new IdentityError(`invalid replacement alias: ${replacementAlias}`);
+    }
     return this.#mutate((state) => {
       const binding = state.aliases[alias];
       if (!binding || binding.artifact !== artifactUrn) {
         throw new IdentityError(`alias is not bound to the artifact: ${alias}`);
+      }
+      if (binding.status !== "active") {
+        throw new IdentityError(`alias is not active and cannot be superseded: ${alias}`);
+      }
+      if (state.aliases[replacementAlias]) {
+        throw new IdentityError(`replacement alias is already bound: ${replacementAlias}`);
+      }
+      const numeric = replacementAlias.match(/^([A-Z][A-Z0-9]*(?:-[A-Z]+)?)-(\d+)$/);
+      if (numeric) {
+        // Reserve numeric replacements against the sequential counter so a
+        // later allocation can never recycle this alias (§12.2).
+        state.counters[numeric[1]] = Math.max(state.counters[numeric[1]] ?? 0, Number(numeric[2]));
       }
       binding.status = "superseded";
       binding.superseded_by = replacementAlias;
