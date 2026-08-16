@@ -1,0 +1,270 @@
+{
+  "schema_version": "rdlc.template-pack/v0.2",
+  "level": "framework",
+  "version": "framework/v1",
+  "artifact_types": {
+    "functional-requirement": {
+      "fields": {
+        "statement": {
+          "required": true,
+          "locked": true
+        },
+        "rationale": {
+          "required": true
+        },
+        "owner": {
+          "required": true,
+          "locked": true
+        },
+        "sources": {
+          "required": true
+        },
+        "acceptance_criteria": {
+          "required": true
+        },
+        "priority": {
+          "allowed_values": [
+            "must",
+            "should",
+            "could",
+            "wont"
+          ]
+        },
+        "actor": {
+          "required": true
+        },
+        "trigger": {
+          "required": false
+        },
+        "main_behavior": {
+          "required": true
+        },
+        "boundaries": {
+          "required": false
+        },
+        "business_rules": {
+          "required": false
+        },
+        "failure_recovery": {
+          "required": false
+        },
+        "data_privacy": {
+          "required": false
+        }
+      }
+    },
+    "non-functional-requirement": {
+      "fields": {
+        "statement": {
+          "required": true,
+          "locked": true
+        },
+        "rationale": {
+          "required": true
+        },
+        "owner": {
+          "required": true,
+          "locked": true
+        },
+        "sources": {
+          "required": true
+        },
+        "acceptance_criteria": {
+          "required": true
+        },
+        "priority": {
+          "allowed_values": [
+            "must",
+            "should",
+            "could",
+            "wont"
+          ]
+        },
+        "quality_attribute": {
+          "required": true,
+          "allowed_values": [
+            "performance",
+            "reliability",
+            "security",
+            "privacy",
+            "accessibility",
+            "usability",
+            "operability",
+            "compliance",
+            "scalability",
+            "maintainability"
+          ]
+        },
+        "measure": {
+          "required": true
+        },
+        "bound": {
+          "required": true
+        }
+      }
+    },
+    "portfolio-epic": {
+      "fields": {
+        "outcome": {
+          "required": true,
+          "locked": true
+        },
+        "business_objective": {
+          "required": true
+        },
+        "benefits": {
+          "required": true
+        },
+        "benefit_owner": {
+          "required": true
+        },
+        "success_measures": {
+          "required": true
+        },
+        "owner": {
+          "required": true,
+          "locked": true
+        },
+        "milestones": {
+          "required": false
+        },
+        "cross_project_dependencies": {
+          "required": false
+        }
+      }
+    },
+    "initiative": {
+      "fields": {
+        "outcome": {
+          "required": true
+        },
+        "scope_boundary": {
+          "required": true
+        },
+        "owner": {
+          "required": true
+        },
+        "success_measures": {
+          "required": true
+        },
+        "parent": {
+          "required": false
+        }
+      }
+    },
+    "epic": {
+      "fields": {
+        "outcome": {
+          "required": true,
+          "locked": true
+        },
+        "scope_boundary": {
+          "required": true
+        },
+        "owner": {
+          "required": true
+        },
+        "requirements_covered": {
+          "required": true
+        },
+        "success_measures": {
+          "required": false
+        },
+        "parent": {
+          "required": false
+        }
+      }
+    },
+    "capability": {
+      "fields": {
+        "capability_statement": {
+          "required": true
+        },
+        "owner": {
+          "required": true
+        },
+        "requirements_covered": {
+          "required": true
+        },
+        "parent": {
+          "required": false
+        }
+      }
+    },
+    "feature": {
+      "fields": {
+        "outcome": {
+          "required": true
+        },
+        "owner": {
+          "required": true
+        },
+        "requirements_covered": {
+          "required": true
+        },
+        "acceptance_criteria": {
+          "required": true
+        },
+        "parent": {
+          "required": false
+        }
+      }
+    },
+    "story": {
+      "fields": {
+        "statement": {
+          "required": true,
+          "locked": true
+        },
+        "actor": {
+          "required": true
+        },
+        "outcome": {
+          "required": true
+        },
+        "acceptance_criteria": {
+          "required": true,
+          "locked": true
+        },
+        "requirements_covered": {
+          "required": true
+        },
+        "dependencies": {
+          "required": false
+        },
+        "components": {
+          "required": false
+        },
+        "assumptions": {
+          "required": false
+        },
+        "estimate": {
+          "required": false
+        },
+        "parent": {
+          "required": false
+        }
+      }
+    },
+    "task": {
+      "fields": {
+        "title": {
+          "required": true
+        },
+        "completion_policy": {
+          "required": true,
+          "locked": true
+        },
+        "owner": {
+          "required": true
+        },
+        "category": {
+          "required": false
+        },
+        "parent": {
+          "required": false
+        }
+      }
+    }
+  }
+}

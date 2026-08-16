@@ -82,6 +82,31 @@ Open the project in Claude Code:
 `/rdlc-status` answers "where was I?" from durable files alone, and
 `/rdlc-doctor` validates installation, policy, and state.
 
+## Content templates and tracker format enforcement
+
+Every artifact type ships with an authored content template
+(`core/templates/framework.json`): requirements declare statement, actor,
+rationale, acceptance criteria and quality fields; portfolio epics declare
+outcome, business objective, benefits and success measures; stories declare
+actor, outcome, criteria and covered requirements — through tasks. Overlay
+packs at organization/portfolio/space/project level tighten these; locked
+framework controls cannot be weakened (§18.3).
+
+The same templates enforce tracker content:
+
+```js
+import { loadCatalog } from "requirements-dlc/template-catalog";
+const catalog = await loadCatalog();
+catalog.validateArtifact(story);                       // promotion-time
+catalog.validateProviderItem(jiraSnapshot, mapping);   // does the Jira issue carry the details?
+catalog.detectFormatDrift(polledUpdates, mapping);     // who broke the story format in Jira?
+```
+
+Missing details produce explainable findings naming both the template field
+and the provider field; unmapped required fields surface as mapping gaps;
+externally edited items that no longer follow the format become RDLC-FMT-003
+review findings with dispositions — never silent repair.
+
 ## Working as a team
 
 Declare advisory scope with `/rdlc-claim` (overlaps notify, never block),
