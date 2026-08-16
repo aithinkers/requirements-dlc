@@ -1,7 +1,15 @@
 /**
  * REL-001 — the §46 definition-of-done scenario, executed end to end from a
- * clean checkout over the implemented release-0.1 slices. Steps that §45.1
- * defers (K-DLC, test generation, regulated signatures) are absent by design.
+ * clean checkout over the implemented release-0.1 slices.
+ *
+ * Deferred and therefore NOT exercised here: §46 step 3 guided elicitation
+ * (§18), step 5 component/RAID/estimate proposals (§19, §22, §23), step 14
+ * migration and §44.3 self-review fixtures, template resolution (step 7 feeds
+ * readinessCheck templatesPass:true), full company-setup discovery beyond
+ * issue types and immutable accounts (step 4), sync-cursor storage assertions
+ * (step 10), and everything §45.1 excludes (K-DLC, test generation, regulated
+ * signatures, webhooks, Confluence API profiles). The conformance statement's
+ * exceptions list is the authoritative deferral record.
  */
 
 import assert from "node:assert/strict";

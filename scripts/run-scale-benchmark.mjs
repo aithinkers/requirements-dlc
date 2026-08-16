@@ -31,9 +31,9 @@ async function fullValidation() {
       }
     }
   }
-  detectCycles(dependencyEdges);
+  const cycles = detectCycles(dependencyEdges);
   const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
-  return { elapsedMs, failures, dependencyEdges: dependencyEdges.length };
+  return { elapsedMs, failures, dependencyEdges: dependencyEdges.length, cyclesFound: cycles.length };
 }
 
 async function incrementalValidation(samples = 100) {
@@ -62,7 +62,7 @@ const report = {
     total_memory_bytes: totalmem(),
     reference_class: "GitHub-hosted ubuntu-latest runner class or equivalent (ADR-001 item 11)"
   },
-  method: "full: schema validation + relationship target resolution + hard-dependency cycle detection over the complete fixture; incremental: p95 of 100 single-artifact validations",
+  method: "full: schema validation + relationship target resolution + hard-dependency cycle detection (cycles are expected in the synthetic graph and reported, not failed) over the complete fixture; incremental: p95 of 100 single-artifact validations",
   results: {
     full_validation_ms: Math.round(full.elapsedMs),
     full_validation_target_ms: 30000,
@@ -70,7 +70,9 @@ const report = {
     incremental_p95_ms: Number(incremental.p95Ms.toFixed(3)),
     incremental_target_ms: 2000,
     incremental_within_target: incremental.p95Ms <= 2000,
-    validation_failures: full.failures
+    validation_failures: full.failures,
+    hard_dependency_edges: full.dependencyEdges,
+    cycles_found: full.cyclesFound
   }
 };
 

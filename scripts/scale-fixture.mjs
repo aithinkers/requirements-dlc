@@ -48,8 +48,9 @@ export function generateScaleFixture({ artifacts = 5000, relationships = 50000 }
   let edges = 0;
   while (edges < relationships) {
     const source = Math.floor(next() * artifacts);
-    // Bias edges toward earlier targets so the graph stays acyclic for the
-    // hard-dependency subset (cycle checks still run over the full set).
+    // Targets are uniform random, so the depends-on subset CONTAINS cycles by
+    // construction — the benchmark measures cycle-detection over a realistic
+    // adversarial graph and reports the count rather than assuming acyclicity.
     const target = Math.floor(next() * artifacts);
     if (source === target) continue;
     records[source].relationships.push({

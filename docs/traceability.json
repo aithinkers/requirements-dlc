@@ -273,7 +273,7 @@
         "§46",
         "§7.10"
       ],
-      "status": "in-progress",
+      "status": "implemented",
       "evidence": {
         "implementation": [
           "scripts/scale-fixture.mjs",
@@ -283,6 +283,27 @@
         "tests": [
           "tests/governance/release-scenario.test.mjs"
         ]
+      }
+    },
+    {
+      "id": "REL-002",
+      "title": "Release 0.1 flip — close conformance gaps, tag, and publish evidence",
+      "issue": 28,
+      "specification_sections": [
+        "§18",
+        "§19",
+        "§20.1",
+        "§22",
+        "§23",
+        "§26",
+        "§44.3",
+        "§45.1",
+        "§46"
+      ],
+      "status": "planned",
+      "evidence": {
+        "implementation": [],
+        "tests": []
       }
     }
   ]
