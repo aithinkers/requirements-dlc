@@ -100,7 +100,14 @@ engagement state; never edit canonical records outside them.
 }
 
 function tomlString(text) {
-  return `"""\n${text.replace(/\\/g, "\\\\").replace(/"""/g, '\\"""')}"""`;
+  // Escape every backslash and double-quote: valid in TOML multiline basic
+  // strings and robust to arbitrary quote runs (review finding).
+  return `"""\n${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"""`;
+}
+
+/** TOML basic-string value via JSON escaping (compatible subset). */
+function tomlValue(text) {
+  return JSON.stringify(String(text));
 }
 
 const HOST_OVERVIEW = (host) => `<!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->
@@ -133,7 +140,7 @@ for (const role of roleCore.roles) {
   );
   expected.set(
     join("codex", ".codex", "agents", `rdlc-${role.id}.toml`),
-    `name = "rdlc-${role.id}"\ndescription = "${role.description}"\ndeveloper_instructions = ${tomlString(roleBody(role, "Codex CLI"))}\n`
+    `name = ${tomlValue(`rdlc-${role.id}`)}\ndescription = ${tomlValue(role.description)}\ndeveloper_instructions = ${tomlString(roleBody(role, "Codex CLI"))}\n`
   );
 }
 
