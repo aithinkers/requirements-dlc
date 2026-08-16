@@ -39,7 +39,14 @@
           },
           {
             "if": { "properties": { "action": { "const": "link" } } },
-            "then": { "required": ["source", "relation", "target"] }
+            "then": {
+              "required": ["source", "relation", "target"],
+              "properties": { "target": { "$ref": "common.schema.json#/$defs/uuidUrn" } }
+            }
+          },
+          {
+            "if": { "properties": { "action": { "const": "create" } } },
+            "then": { "properties": { "target": { "type": "object" } } }
           }
         ]
       }

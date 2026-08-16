@@ -123,3 +123,9 @@ test("FEAT-002: work claim scope must not be empty", async () => {
   record.scope = {};
   assert.equal((await validateRecord(record, ajv)).valid, false);
 });
+
+test("FEAT-002: changeset link target must be a UUID URN, not a display alias", async () => {
+  const record = await loadFixture("changeset.yaml");
+  record.operations[1].target = "COM-104";
+  assert.equal((await validateRecord(record, ajv)).valid, false);
+});
