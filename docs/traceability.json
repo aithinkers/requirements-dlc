@@ -549,6 +549,32 @@
           "tests/governance/human-runtime.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-021",
+      "title": "Release scoping and governed high-level scope documents",
+      "issue": 50,
+      "specification_sections": [
+        "18.2",
+        "20",
+        "22",
+        "26",
+        "27",
+        "29.6"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "core/lib/scope-doc.mjs",
+          "core/templates/framework.json",
+          "core/lib/connector-config.mjs",
+          "core/lib/sensors.mjs",
+          "core/commands/bodies/scope-doc.md"
+        ],
+        "tests": [
+          "tests/governance/scope-doc.test.mjs"
+        ]
+      }
     }
   ]
 }

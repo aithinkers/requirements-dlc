@@ -130,6 +130,9 @@
         },
         "cross_project_dependencies": {
           "required": false
+        },
+        "target_release": {
+          "required": false
         }
       }
     },
@@ -148,6 +151,9 @@
           "required": true
         },
         "parent": {
+          "required": false
+        },
+        "target_release": {
           "required": false
         }
       }
@@ -172,6 +178,9 @@
         },
         "parent": {
           "required": false
+        },
+        "target_release": {
+          "required": false
         }
       }
     },
@@ -187,6 +196,9 @@
           "required": true
         },
         "parent": {
+          "required": false
+        },
+        "target_release": {
           "required": false
         }
       }
@@ -206,6 +218,9 @@
           "required": true
         },
         "parent": {
+          "required": false
+        },
+        "target_release": {
           "required": false
         }
       }
@@ -243,6 +258,9 @@
         },
         "parent": {
           "required": false
+        },
+        "target_release": {
+          "required": false
         }
       }
     },
@@ -262,6 +280,69 @@
           "required": false
         },
         "parent": {
+          "required": false
+        }
+      }
+    },
+    "release": {
+      "fields": {
+        "name": {
+          "required": true,
+          "locked": true
+        },
+        "target_date": {
+          "required": true
+        },
+        "goals": {
+          "required": true
+        },
+        "status": {
+          "required": true,
+          "allowed_values": [
+            "planned",
+            "active",
+            "released",
+            "cancelled"
+          ]
+        },
+        "owner": {
+          "required": false
+        },
+        "notes": {
+          "required": false
+        }
+      }
+    },
+    "scope-document": {
+      "fields": {
+        "intent": {
+          "required": true,
+          "locked": true
+        },
+        "in_scope": {
+          "required": true,
+          "locked": true
+        },
+        "out_of_scope": {
+          "required": true,
+          "locked": true
+        },
+        "assumptions": {
+          "required": true
+        },
+        "stakeholders": {
+          "required": true
+        },
+        "success_measures": {
+          "required": true
+        },
+        "release": {
+          "required": false
+        },
+        "open_questions": {
+          "required": false
+        },
+        "coverage": {
           "required": false
         }
       }

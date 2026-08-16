@@ -54,6 +54,14 @@ provider work-item type and template fields — for example story → Jira
 tracker cannot carry a required template field, say so — that surfaces later
 as an RDLC-FMT-002 mapping gap, not a silent hole.
 
+### 4b. Releases (optional)
+
+If the team schedules work by release, ask which provider field carries it —
+Jira `fixVersions` (by name), Azure DevOps `System.IterationPath` — and
+record it as the `releases:` binding (`provider_field` + `match_by`). This
+lets `/rdlc-scope-doc` scope documents by release and lets drift checks
+catch items moved to another release in the tracker.
+
 ### 5. Write, validate, report
 
 1. Write `config/connectors/<id>.yaml` with `schema_version:

@@ -139,6 +139,27 @@ export const SENSORS = {
     return result("state", true, `${plural(engagements.length, "engagement")} healthy. Next: ${engagements[0].next}`);
   },
 
+  /** Release assignments point at declared, live releases. */
+  async releases(context) {
+    const { validateReleaseAssignments } = await import("./scope-doc.mjs");
+    const releases = context.artifacts.filter((entry) => entry.record?.type === "release").map((entry) => entry.record);
+    const assigned = context.artifacts.filter((entry) => entry.record?.target_release != null && entry.record.target_release !== "").map((entry) => entry.record);
+    if (assigned.length === 0) return result("releases", true, "No release assignments yet (assign work to a release anytime).");
+    let findings;
+    try {
+      findings = validateReleaseAssignments(assigned, releases);
+    } catch (error) {
+      return result("releases", false,
+        "The declared releases themselves have a problem (a duplicate or unnamed release) — fix the release records before assigning work to them.",
+        { next: "/rdlc-scope-doc", details: [{ error: error.message }] });
+    }
+    return findings.length === 0
+      ? result("releases", true, `${plural(assigned.length, "item")} assigned across ${plural(releases.length, "release")} — all assignments check out.`)
+      : result("releases", false,
+          `${plural(findings.length, "item")} point${findings.length === 1 ? "s" : ""} at a release that doesn't exist or was cancelled — those items are effectively unscheduled until someone fixes the assignment.`,
+          { next: "/rdlc-scope-doc", details: findings });
+  },
+
   /** Connector configuration is valid, when declared. */
   async connectors(context) {
     const { loadConnectorConfig } = await import("./connector-config.mjs");
