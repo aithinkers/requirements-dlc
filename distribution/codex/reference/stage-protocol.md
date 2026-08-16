@@ -9,7 +9,7 @@ durable state govern (§7.2). Read this before executing any stage.
 1. Load the engagement state (`rdlc/spaces/<space>/engagements/<id>/rdlc-state.yaml`).
    If `loadEngagement` reports a breadcrumb mismatch, STOP and present the
    §34.4 resume options — never continue on unverified state.
-2. Resolve the stage from `core/stages/stages.json`: confirm its condition
+2. Resolve the stage from the stage graph (`rdlc/reference/stages.json` in an installed project; `core/stages/stages.json` in this repository): confirm its condition
    applies to the selected scope profile; if a CONDITIONAL stage is skipped,
    record the reason in the state when the omission affects evidence,
    approval, security, or verification (§15).

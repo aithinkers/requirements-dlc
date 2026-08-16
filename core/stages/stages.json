@@ -1,6 +1,6 @@
 {
   "schema_version": "rdlc.stages/v0.2",
-  "protocol": "core/protocols/stage-protocol.md",
+  "protocol": "rdlc/reference/stage-protocol.md (installed) | core/protocols/stage-protocol.md (repository)",
   "stages": [
     {
       "phase": "0-initialize",
