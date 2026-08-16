@@ -20,6 +20,21 @@ const PLUGIN = `${ROOT}/.claude-plugin`;
 const core = JSON.parse(await readFile("core/commands/commands.json", "utf8"));
 const roleCore = JSON.parse(await readFile("core/roles/roles.json", "utf8"));
 
+// Authored per-role personas (core/roles/bodies/<id>.md).
+const roleBodies = new Map();
+try {
+  for (const name of await readdir("core/roles/bodies")) {
+    const id = name.replace(/\.md$/u, "");
+    if (!roleCore.roles.some((role) => role.id === id)) {
+      console.error(`ERROR: authored persona has no matching role: core/roles/bodies/${name}`);
+      process.exit(1);
+    }
+    roleBodies.set(id, (await readFile(`core/roles/bodies/${name}`, "utf8")).trimEnd());
+  }
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error;
+}
+
 // Authored per-command extended bodies (core/commands/bodies/<verb>.md).
 const extendedBodies = new Map();
 try {
@@ -60,7 +75,7 @@ description: ${JSON.stringify(role.description)}
 You are the R-DLC ${role.id} role lens (§38).
 
 ${role.purpose}
-
+${roleBodies.has(role.id) ? `\n${roleBodies.get(role.id)}\n` : ""}
 Your durable outputs are: ${role.canonical_outputs.join(", ")}. Delegated
 output remains a proposal until integrated and gated (§38); you never set
 approved, baselined, or waived states (§14.6), and you receive only the
@@ -89,10 +104,11 @@ ${guard}${extended}`;
 }
 
 function roleBody(role, host) {
+  const persona = roleBodies.has(role.id) ? `\n${roleBodies.get(role.id)}\n` : "";
   return `You are the R-DLC ${role.id} role lens (§38) on ${host}.
 
 ${role.purpose}
-
+${persona}
 Your durable outputs are: ${role.canonical_outputs.join(", ")}. Delegated
 output remains a proposal until integrated and gated (§38); you never set
 approved, baselined, or waived states (§14.6), and you receive only the
@@ -132,6 +148,19 @@ expected.set(
   join("claude-code", ".claude-plugin", "plugin.json"),
   JSON.stringify({ agents: "./agents", commands: "./commands", description: "Governed R-DLC Claude Code adapter", name: "rdlc", version: "0.2.0" }) + "\n"
 );
+
+// Shared reference tree (stage protocol, stage graph, scope profiles) — the
+// installer places it at rdlc/reference/ so command bodies can cite it.
+const protocol = await readFile("core/protocols/stage-protocol.md", "utf8");
+const stagesJson = await readFile("core/stages/stages.json", "utf8");
+const scopeFiles = (await readdir("core/scopes")).sort();
+for (const host of ["claude-code", "codex", "kiro", "kiro-ide"]) {
+  expected.set(join(host, "reference", "stage-protocol.md"), protocol);
+  expected.set(join(host, "reference", "stages.json"), stagesJson);
+  for (const scope of scopeFiles) {
+    expected.set(join(host, "reference", "scopes", scope), await readFile(join("core", "scopes", scope), "utf8"));
+  }
+}
 
 // Codex adapter (§36): custom prompts plus md+toml role agents (K-DLC parity).
 expected.set(join("codex", "AGENTS.md"), HOST_OVERVIEW("Codex CLI"));
@@ -177,7 +206,8 @@ for (const host of ["kiro", "kiro-ide"]) {
 const GENERATED_DIRECTORIES = [
   join("claude-code", "commands"), join("claude-code", "agents"), join("claude-code", ".claude-plugin"),
   join("codex", ".codex", "prompts"), join("codex", ".codex", "agents"),
-  join("kiro", ".kiro", "agents"), join("kiro-ide", ".kiro", "agents")
+  join("kiro", ".kiro", "agents"), join("kiro-ide", ".kiro", "agents"),
+  ...["claude-code", "codex", "kiro", "kiro-ide"].flatMap((host) => [join(host, "reference"), join(host, "reference", "scopes")])
 ];
 
 async function sweepSkills(host, failures) {
@@ -210,7 +240,9 @@ if (CHECK) {
       continue;
     }
     for (const name of actualFiles) {
-      if (!expected.has(join(directory, name))) failures.push(`unexpected distribution file: ${join(directory, name)}`);
+      const candidate = join(directory, name);
+      if (GENERATED_DIRECTORIES.includes(candidate)) continue; // nested generated directory
+      if (!expected.has(candidate)) failures.push(`unexpected distribution file: ${candidate}`);
     }
   }
   for (const host of ["kiro", "kiro-ide"]) await sweepSkills(host, failures);

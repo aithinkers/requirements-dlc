@@ -273,3 +273,87 @@ test("FEAT-015: setup installs codex and kiro surfaces with the same semantics",
   assert.equal((await runSetup({ target, tool: "codex", log: quiet })).installed.length, 0);
   await assert.rejects(runSetup({ target, tool: "cursor", log: quiet }), /unknown tool/);
 });
+
+test("FEAT-019: the stage graph covers every §15 phase with leads, conditions, and scope applicability", async () => {
+  const graph = JSON.parse(await readFile("core/stages/stages.json", "utf8"));
+  assert.ok(graph.stages.length >= 28);
+  const phases = new Set(graph.stages.map((stage) => stage.phase));
+  for (const phase of ["0-initialize", "1-frame", "2-discover", "3-model", "4-define", "5-plan", "6-validate", "7-govern", "8-synchronize", "9-verify", "10-evolve"]) {
+    assert.ok(phases.has(phase), phase);
+  }
+  const roles = JSON.parse(await readFile("core/roles/roles.json", "utf8")).roles.map((role) => role.id);
+  for (const stage of graph.stages) {
+    assert.ok(["ALWAYS", "CONDITIONAL"].includes(stage.condition), stage.slug);
+    assert.ok(roles.includes(stage.lead_role), `${stage.slug} lead ${stage.lead_role}`);
+    assert.ok(stage.produces.length > 0, stage.slug);
+    if (stage.condition === "ALWAYS") assert.equal(stage.scopes, null, `${stage.slug} ALWAYS stages apply to all scopes`);
+  }
+  // Every ALWAYS stage from the spec's table is present.
+  const always = graph.stages.filter((stage) => stage.condition === "ALWAYS").map((stage) => stage.slug);
+  for (const slug of ["workspace-detection", "scope-selection", "intent-framing", "requirement-drafting", "schema-template-validation", "semantic-review", "trace-coverage-review", "comment-resolution", "readiness-approval"]) {
+    assert.ok(always.includes(slug), slug);
+  }
+});
+
+test("FEAT-019: scope profiles author stage inclusion consistently with the graph", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const graph = JSON.parse(await readFile("core/stages/stages.json", "utf8"));
+  const scopes = (await readdir("core/scopes")).map((name) => name.replace(".md", ""));
+  assert.deepEqual(scopes.sort(), ["audit", "change", "migration", "portfolio", "quick", "regulated", "standard"]);
+  for (const scope of scopes) {
+    const body = await readFile(`core/scopes/${scope}.md`, "utf8");
+    for (const stage of graph.stages) {
+      const included = stage.condition === "ALWAYS" || (stage.scopes && stage.scopes.includes(scope));
+      assert.equal(body.includes(`- ${stage.slug}`), included, `${scope}: ${stage.slug}`);
+    }
+  }
+  const quick = await readFile("core/scopes/quick.md", "utf8");
+  assert.match(quick, /recorded reason/, "trim rationale present");
+});
+
+test("FEAT-019: agents carry full personas with stage ownership in every harness", async () => {
+  for (const path of [
+    "distribution/claude-code/agents/rdlc-business-analyst.md",
+    "distribution/codex/.codex/agents/rdlc-business-analyst.md",
+    "distribution/kiro/.kiro/agents/rdlc-business-analyst.md"
+  ]) {
+    const body = await readFile(path, "utf8");
+    assert.match(body, /## Stages owned/, path);
+    assert.match(body, /## Responsibilities/, path);
+    assert.match(body, /## Working discipline/, path);
+    assert.match(body, /never an invented value/, path);
+  }
+  const facilitator = await readFile("distribution/claude-code/agents/rdlc-facilitator.md", "utf8");
+  assert.match(facilitator, /## Example/);
+  // Orphan personas fail the drift check.
+  const fs = await import("node:fs/promises");
+  await fs.writeFile("core/roles/bodies/nonexistent.md", "orphan", "utf8");
+  try {
+    assert.throws(() => execFileSync("node", ["scripts/generate-distribution.mjs", "--check"], { stdio: "pipe" }), (error) => error.status === 1);
+  } finally {
+    await fs.rm("core/roles/bodies/nonexistent.md");
+  }
+});
+
+test("FEAT-019: core commands ship procedural bodies and the reference tree installs (§36)", async () => {
+  for (const verb of ["start", "capture", "triage", "draft", "promote", "discover", "review", "readiness", "sync", "status"]) {
+    const body = await readFile(`distribution/claude-code/commands/rdlc-${verb}.md`, "utf8");
+    assert.match(body, /## Procedure/, verb);
+    assert.ok(body.length > 800, `${verb} body is substantive (${body.length})`);
+  }
+  const start = await readFile("distribution/claude-code/commands/rdlc-start.md", "utf8");
+  assert.match(start, /rdlc\/reference\/stage-protocol\.md/);
+
+  const { runSetup } = await import("../../scripts/setup.mjs");
+  const target = await mkdtemp(join(tmpdir(), "rdlc-ref-"));
+  await runSetup({ target, log: () => {} });
+  assert.match(await readFile(join(target, "rdlc", "reference", "stage-protocol.md"), "utf8"), /R-DLC stage protocol/);
+  const stages = JSON.parse(await readFile(join(target, "rdlc", "reference", "stages.json"), "utf8"));
+  assert.ok(stages.stages.length >= 28);
+  const scopes = await (await import("node:fs/promises")).readdir(join(target, "rdlc", "reference", "scopes"));
+  assert.equal(scopes.length, 7);
+  // Kiro installs carry the reference tree too.
+  const kiroTarget = await mkdtemp(join(tmpdir(), "rdlc-ref-kiro-"));
+  await runSetup({ target: kiroTarget, tool: "kiro", log: () => {} });
+  assert.match(await readFile(join(kiroTarget, "rdlc", "reference", "stage-protocol.md"), "utf8"), /R-DLC stage protocol/);
+});
