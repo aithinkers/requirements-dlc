@@ -191,10 +191,14 @@
       "specification_sections": [
         "§35"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/lib/collaboration.mjs"
+        ],
+        "tests": [
+          "tests/governance/collaboration.test.mjs"
+        ]
       }
     },
     {
