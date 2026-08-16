@@ -114,10 +114,14 @@
         "§12.2",
         "§35.9"
       ],
-      "status": "planned",
+      "status": "verified",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "core/lib/identity.mjs"
+        ],
+        "tests": [
+          "tests/governance/identity.test.mjs"
+        ]
       }
     },
     {
