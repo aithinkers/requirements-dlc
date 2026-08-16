@@ -1,0 +1,62 @@
+{
+  "schema_version": "rdlc.self-review-fixture/v0.2",
+  "anchor": "specification 0.2.0 baseline + ADR-001",
+  "findings": [
+    {
+      "id": "SR-001",
+      "class": "broken-cross-reference",
+      "summary": "\u00a72.2 relative K-DLC link resolves nowhere in the published repository",
+      "disposition": "accepted",
+      "fixed_in": "ADR-001 item 2"
+    },
+    {
+      "id": "SR-002",
+      "class": "migration-presupposition",
+      "summary": "\u00a72.4 normative migration for 0.1 projects that cannot exist",
+      "disposition": "accepted",
+      "fixed_in": "ADR-001 item 4"
+    },
+    {
+      "id": "SR-003",
+      "class": "informative-stack-mismatch",
+      "summary": "\u00a716.2.3 Python-centric stack contradicts the Node reference toolchain",
+      "disposition": "accepted",
+      "fixed_in": "ADR-001 item 8"
+    },
+    {
+      "id": "SR-004",
+      "class": "lease-atomicity-gap",
+      "summary": "git-ref-compare-and-swap example without a defined atomic CAS transport",
+      "disposition": "accepted",
+      "fixed_in": "ADR-001 item 7"
+    },
+    {
+      "id": "SR-005",
+      "class": "identity-verification-vagueness",
+      "summary": "\u00a727.2 authenticated self-binding lacks a concrete CLI mechanism",
+      "disposition": "accepted",
+      "fixed_in": "ADR-001 item 10"
+    },
+    {
+      "id": "SR-006",
+      "class": "benchmark-environment-omission",
+      "summary": "\u00a77.10 requires a declared environment none was named",
+      "disposition": "accepted",
+      "fixed_in": "ADR-001 item 11"
+    },
+    {
+      "id": "SR-007",
+      "class": "internal-inconsistency",
+      "summary": "\u00a713 relationship-record required fields conflict with the \u00a712.3 verbatim example",
+      "disposition": "open-erratum",
+      "fixed_in": "issue #2 follow-up item 16"
+    },
+    {
+      "id": "SR-008",
+      "class": "moot-external-artifact",
+      "summary": "reported \u00a727.7 mojibake existed only in a pasted copy, not the baseline bytes",
+      "disposition": "rejected-as-moot",
+      "fixed_in": "ADR-001 item 1"
+    }
+  ]
+}

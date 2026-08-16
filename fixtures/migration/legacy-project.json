@@ -1,0 +1,15 @@
+{
+  "schema_version": "rdlc.project/v0.1",
+  "project": "legacy-checkout",
+  "initiatives": [
+    { "id": "INIT-1", "title": "Checkout modernization" }
+  ],
+  "artifacts": [
+    { "id": "REQ-1", "type": "functional-requirement", "title": "Preserve cart", "statement": "Preserve the cart.", "status": "approved-and-synced", "relationships": [], "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-02T00:00:00Z" },
+    { "id": "STORY-1", "type": "story", "title": "Persist cart rows", "statement": "Persist cart rows.", "status": "tested", "relationships": [{ "type": "implements", "target": "REQ-1" }], "created_at": "2026-01-03T00:00:00Z", "updated_at": "2026-01-03T00:00:00Z" },
+    { "id": "REQ-2", "type": "functional-requirement", "title": "Expire carts", "statement": "Expire carts after retention.", "status": "draft", "relationships": [{ "type": "derives-from", "target": "REQ-1" }], "created_at": "2026-01-04T00:00:00Z", "updated_at": "2026-01-04T00:00:00Z" }
+  ],
+  "approvals": [
+    { "artifact": "REQ-1", "approver": "alex@example.com", "decision": "approve", "at": "2026-01-02T12:00:00Z" }
+  ]
+}

@@ -1,0 +1,97 @@
+/**
+ * Template resolution and inheritance (spec §18.3).
+ *
+ * Precedence: framework defaults < organization < portfolio < space/team <
+ * project < engagement override. A lower level may extend or tighten
+ * inherited rules; it MUST NOT weaken a locked control.
+ */
+
+export class TemplateError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "TemplateError";
+  }
+}
+
+export const PACK_ORDER = Object.freeze(["framework", "organization", "portfolio", "space", "project", "engagement"]);
+
+/**
+ * Resolve one artifact-type template across ordered packs. Each pack entry:
+ * { level, fields: {name: {required?, allowed_values?, locked?}},
+ *   rules: {name: {…, locked?}} }. Locked entries record their source level
+ * and version; later levels may not remove or relax them (§18.3, §39).
+ */
+export function resolveTemplate(packs) {
+  const ordered = [...packs].sort((a, b) => PACK_ORDER.indexOf(a.level) - PACK_ORDER.indexOf(b.level));
+  for (const pack of ordered) {
+    if (!PACK_ORDER.includes(pack.level)) throw new TemplateError(`unknown pack level: ${pack.level}`);
+    if (!pack.version) throw new TemplateError(`pack at level ${pack.level} requires a version (§39)`);
+    // Canonicalize lock literals at creation: a locked field must use strict
+    // canonical constraint forms or it cannot be trusted as a lock.
+    for (const [name, definition] of Object.entries(pack.fields ?? {})) {
+      if (definition.locked) {
+        if ("required" in definition && typeof definition.required !== "boolean") {
+          throw new TemplateError(`locked field ${name} declares a non-boolean required constraint`);
+        }
+        if ("allowed_values" in definition && !Array.isArray(definition.allowed_values)) {
+          throw new TemplateError(`locked field ${name} declares a non-array allowed_values constraint`);
+        }
+      }
+    }
+  }
+  // Null-prototype accumulators: a field literally named __proto__ is data,
+  // never prototype mutation (review LOW follow-up).
+  const fields = Object.create(null);
+  const provenance = Object.create(null);
+  for (const pack of ordered) {
+    for (const [name, definition] of Object.entries(pack.fields ?? {})) {
+      const existing = fields[name];
+      if (existing?.locked) {
+        // §18.3 robustness: any redefinition that is not strictly `true` for a
+        // locked requirement, or not a subset array for locked allowed
+        // values, is a weakening — regardless of the literal used.
+        const weakens =
+          ("required" in definition && existing.required === true && definition.required !== true) ||
+          ("allowed_values" in definition && Array.isArray(existing.allowed_values) &&
+            (!Array.isArray(definition.allowed_values) ||
+              !definition.allowed_values.every((value) => existing.allowed_values.includes(value))));
+        if (weakens || definition.locked === false) {
+          throw new TemplateError(
+            `pack ${pack.level}@${pack.version} attempts to weaken locked field "${name}" from ${provenance[name].level}@${provenance[name].version} (§18.3)`
+          );
+        }
+        // Tightening a locked field is permitted; the lock is preserved.
+        fields[name] = { ...existing, ...definition, locked: true };
+      } else {
+        fields[name] = { ...existing, ...definition };
+        provenance[name] = { level: pack.level, version: pack.version };
+      }
+      if (fields[name].locked) provenance[name] = provenance[name] ?? { level: pack.level, version: pack.version };
+    }
+  }
+  return {
+    fields: { ...fields },
+    // §39 — the source and version of every active rule is exposed.
+    provenance: { ...provenance },
+    locked: Object.fromEntries(Object.entries(fields).filter(([, definition]) => definition.locked).map(([name]) => [name, provenance[name]]))
+  };
+}
+
+/** Validate an artifact against a resolved template (§24.1 template conformance). */
+export function validateAgainstTemplate(artifact, resolved) {
+  const failures = [];
+  for (const [name, definition] of Object.entries(resolved.fields)) {
+    const value = artifact[name];
+    if (definition.required && (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0))) {
+      failures.push(`required field missing: ${name}`);
+    }
+    if ("allowed_values" in definition && definition.allowed_values !== undefined && definition.allowed_values !== null) {
+      if (!Array.isArray(definition.allowed_values)) {
+        failures.push(`template defect: allowed_values for ${name} is not an array`);
+      } else if (value !== undefined && value !== null && !definition.allowed_values.includes(value)) {
+        failures.push(`field ${name} has a value outside its allowed set: ${value}`);
+      }
+    }
+  }
+  return failures;
+}

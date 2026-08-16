@@ -3,15 +3,15 @@
   "specification": "rdlc",
   "specification_version": "0.2.0",
   "implementation": "requirements-dlc reference distribution",
-  "implementation_version": "0.0.1",
-  "release_candidate": false,
+  "implementation_version": "0.1.0",
+  "release_candidate": true,
   "modules": [
     "Core",
-    "Governed-Basic"
+    "Governed-Basic",
+    "Planning"
   ],
   "partial_modules": {
-    "Planning": "dependency graph, cycle detection, coverage, and collision review are implemented; planning-hierarchy templates, estimation profiles (\u00a722), RAID+D records (\u00a723), and delivery waves are outstanding",
-    "Core": "capture, promotion, trace, lifecycle, identity, hashing, intake, state, and resume are implemented; elicitation prompt packs (\u00a718), component registry lifecycle (\u00a719), and comment review (\u00a726) are outstanding"
+    "Planning": "implemented: dependency records with rationale/origin/confidence, cycle detection, planning waves with an external dependency register and walking-skeleton candidate, critical blockers, coverage/collision review, estimation profiles, RAID+D, non-development task categories; outstanding depth: \u00a720.1 full company-setup resolution beyond issue-type/field discovery, \u00a720.2 configurable-hierarchy templates beyond the delegated promotion validator, and \u00a721 release/milestone slicing"
   },
   "connectors": [
     "Connected:Jira-Cloud-Company-Managed"
@@ -21,11 +21,12 @@
     "Harness:Claude-Code"
   ],
   "exceptions": [
-    "Planning module is partial (see partial_modules)",
-    "semantic review, duplicate ranking, and test generation (Verification module) are not claimed",
-    "\u00a744.3 standing self-review fixture pending import of the frozen 0.1 specification (ADR-001 item 14)",
-    "the \u00a746 definition of done requires a tagged build with a published test report; this statement precedes that tag",
-    "release flip, tagged-build evidence, and remaining \u00a746 steps tracked as REL-002 (issue #28)"
+    "Verification module (test generation), Knowledge-Grounded, Governed-Regulated, Portfolio, webhooks, and Confluence API profiles are excluded from release 0.1 by \u00a745.1",
+    "connector capability subset declared in core/connectors/jira CAPABILITIES (attachments, native approvals, estimation-field discovery, history retention, ADF read-back normalization deferred) \u2014 \u00a746 step 4 is exercised to that declared depth",
+    "the initial semantic review (\u00a724.2) is the clearly labeled deterministic-heuristic reviewer in core/lib/semantic-review.mjs; its quality claims are published separately per \u00a744.2 and are not deterministic conformance",
+    "\u00a713 relationship-record field breadth follows the \u00a712.3 verbatim example pending the erratum adjudication (issue #2 follow-up item 16)",
+    "\u00a725 duplicate detection is the deterministic normalized-statement + external-identity subset (promotion gate); semantic similarity ranking is a \u00a744.2 evaluation concern",
+    "\u00a734.6 audit sharding is per-record audit trails in artifacts/leases; per-host JSONL shards land with multi-host harnesses (release 0.2+)"
   ],
   "test_report": "npm test from a clean checkout; scale benchmark via node scripts/run-scale-benchmark.mjs",
   "scale_benchmark": {
@@ -35,5 +36,9 @@
       "incremental_p95_ms": 2000
     },
     "reference_environment": "GitHub-hosted ubuntu-latest runner class (ADR-001 item 11); per-run environment recorded in the benchmark report"
+  },
+  "definition_of_done": {
+    "scenario": "tests/governance/release-scenario.test.mjs \u2014 \u00a746 steps 1-13 on the synthetic project at the declared connector depth (estimation-field and workflow discovery deferred per CAPABILITIES); migration fixture (\u00a744.1 item 16) and \u00a744.3-as-amended self-review fixture in tests/governance/modules.test.mjs",
+    "tagged_build": "pending: v0.1.0 will be created from the merge commit of this pull request; the main-branch CI run for that commit is the published test report. release_candidate=true is the candidate claim, not the release."
   }
 }
