@@ -6,6 +6,15 @@
  * Every mutation follows pull -> diff -> validate -> changeset -> preview ->
  * approval -> idempotent apply -> read-back -> verify -> receipt (§29.1).
  * External content is untrusted data throughout (§7.8).
+ *
+ * Capability profile: Connected:Jira-Cloud-Company-Managed, release-0.1
+ * subset. Declared deferrals (§30): attachments, native approvals,
+ * estimation-field mapping, changelog/history retention, labels/components/
+ * versions/sprint fields, subtask hierarchy mapping, webhooks
+ * (Webhook-Receiver unclaimed), and rich-text (ADF) read-back normalization —
+ * ADF-transformed fields must be excluded from the read-back mapping until a
+ * comparator profile lands. Status changes use the transition operation, not
+ * field updates.
  */
 
 import { canonicalBytes, readbackHash, sourceHash } from "../../lib/canonical.mjs";
@@ -21,6 +30,13 @@ export class ConnectorError extends Error {
 
 export const WRITE_MODES = Object.freeze(["read-only", "propose", "approve-each-batch", "approved-automation"]);
 
+/** §30 capability declaration for conformance reporting. */
+export const CAPABILITIES = Object.freeze({
+  profile: "Connected:Jira-Cloud-Company-Managed",
+  supported: Object.freeze(["discover-schema", "discover-permissions", "pull", "normalize", "diff", "validate-changeset", "create", "update", "link", "comment", "transition", "poll", "read-back", "receipts", "full-reconciliation"]),
+  deferred: Object.freeze(["attach", "native-approvals", "estimation-fields", "history-retention", "labels-components-versions-sprints", "subtask-hierarchy", "webhooks", "adf-readback-normalization"])
+});
+
 const IDEMPOTENCY_PROPERTY = "rdlc.operation";
 
 export class JiraConnector {
@@ -28,6 +44,7 @@ export class JiraConnector {
   #mapping;
   #writeMode;
   #now;
+  #actor = null;
 
   /**
    * @param transport injected request executor: ({method, path, body}) -> {status, body}
@@ -160,14 +177,21 @@ export class JiraConnector {
   /** Reconcile an uncertain create by its idempotency identity (§29.4). */
   async reconcileCreate(operation) {
     const jql = encodeURIComponent(`project = ${this.#mapping.projectKey}`);
-    const search = await this.#request("GET", `/rest/api/3/search?jql=${jql}&properties=${IDEMPOTENCY_PROPERTY}`);
-    if (search.status !== 200) throw new ConnectorError("reconciliation search failed", "external-write-uncertain");
-    for (const issue of search.body.issues ?? []) {
-      if (issue.properties?.[IDEMPOTENCY_PROPERTY]?.key === operation.idempotency_key) {
-        return { found: true, item_id: issue.key, provider_item_id: issue.id };
+    let startAt = 0;
+    for (;;) {
+      const search = await this.#request("GET", `/rest/api/3/search?jql=${jql}&properties=${IDEMPOTENCY_PROPERTY}&startAt=${startAt}`);
+      if (search.status !== 200) throw new ConnectorError("reconciliation search failed", "external-write-uncertain");
+      const issues = search.body.issues ?? [];
+      for (const issue of issues) {
+        if (issue.properties?.[IDEMPOTENCY_PROPERTY]?.key === operation.idempotency_key) {
+          return { found: true, item_id: issue.key, provider_item_id: issue.id };
+        }
       }
+      const total = search.body.total ?? issues.length;
+      startAt += issues.length;
+      // Every page must be inspected before concluding the create is absent (§29.4).
+      if (issues.length === 0 || startAt >= total) return { found: false };
     }
-    return { found: false };
   }
 
   /**
@@ -175,7 +199,7 @@ export class JiraConnector {
    * per-operation statuses and receipts; resumable without duplicating
    * verified operations (§29.5).
    */
-  async applyChangeset(changeset, { approval, priorResults = {} } = {}) {
+  async applyChangeset(changeset, { approval, automationPolicy, actor = null, priorResults = {} } = {}) {
     if (this.#writeMode === "read-only") throw new ConnectorError("write mode is read-only", "policy-violation");
     if (this.#writeMode === "propose") {
       return { applied: false, preview: this.preview(changeset), reason: "propose mode generates changesets without applying (§29.2)" };
@@ -183,6 +207,21 @@ export class JiraConnector {
     if (this.#writeMode === "approve-each-batch" && approval?.status !== "approved") {
       throw new ConnectorError("changeset requires human batch approval before apply (§29.2)", "approval-required");
     }
+    if (this.#writeMode === "approved-automation") {
+      // §29.2 — pre-authorized operations apply only within DECLARED policy and scope.
+      if (!automationPolicy?.id || !Array.isArray(automationPolicy.allowedActions)) {
+        throw new ConnectorError("approved-automation requires a declared automation policy (§29.2)", "approval-required");
+      }
+      for (const operation of changeset.operations) {
+        if (!automationPolicy.allowedActions.includes(operation.action)) {
+          throw new ConnectorError(`operation ${operation.operation_id} (${operation.action}) is outside the automation policy scope (§29.2)`, "policy-violation");
+        }
+      }
+      if (automationPolicy.maxOperations !== undefined && changeset.operations.length > automationPolicy.maxOperations) {
+        throw new ConnectorError("changeset exceeds the automation policy operation bound (§29.2)", "policy-violation");
+      }
+    }
+    this.#actor = actor;
 
     const results = { ...priorResults };
     const receipts = [];
@@ -216,6 +255,7 @@ export class JiraConnector {
     if (operation.action === "update") return this.#applyUpdate(changeset, operation);
     if (operation.action === "link") return this.#applyLink(changeset, operation);
     if (operation.action === "comment") return this.#applyComment(changeset, operation);
+    if (operation.action === "transition") return this.#applyTransition(changeset, operation);
     throw new ConnectorError(`unsupported operation action: ${operation.action}`, "provider-capability-unavailable");
   }
 
@@ -239,10 +279,17 @@ export class JiraConnector {
     if (existing.found) {
       itemId = existing.item_id;
     } else {
-      const response = await this.#request("POST", "/rest/api/3/issue", {
-        fields: { project: { key: this.#mapping.projectKey }, issuetype: { name: operation.target.work_type }, ...operation.fields },
-        properties: [{ key: IDEMPOTENCY_PROPERTY, value: { key: operation.idempotency_key, artifact: operation.artifact } }]
-      });
+      let response;
+      try {
+        response = await this.#request("POST", "/rest/api/3/issue", {
+          fields: { project: { key: this.#mapping.projectKey }, issuetype: { name: operation.target.work_type }, ...operation.fields },
+          properties: [{ key: IDEMPOTENCY_PROPERTY, value: { key: operation.idempotency_key, artifact: operation.artifact } }]
+        });
+      } catch (error) {
+        if (error instanceof ConnectorError) throw error;
+        // A thrown network error mid-create means the outcome is UNKNOWN (§29.4).
+        throw new ConnectorError(`create outcome unknown for ${operation.operation_id}: ${error.message}`, "external-write-uncertain");
+      }
       if (response.status === undefined || response.timeout) {
         throw new ConnectorError(`create outcome unknown for ${operation.operation_id}`, "external-write-uncertain");
       }
@@ -291,6 +338,20 @@ export class JiraConnector {
     });
   }
 
+  async #applyTransition(changeset, operation) {
+    // §30 — status changes go through the transitions endpoint, never field updates.
+    const available = await this.#request("GET", `/rest/api/3/issue/${operation.target}/transitions`);
+    if (available.status !== 200) throw new ConnectorError(`transition discovery failed for ${operation.target}`, "provider-capability-unavailable");
+    const match = (available.body.transitions ?? []).find((entry) => entry.to?.name === operation.fields.status || entry.name === operation.fields.status);
+    if (!match) throw new ConnectorError(`no transition reaches status ${operation.fields.status}`, "provider-capability-unavailable");
+    const response = await this.#request("POST", `/rest/api/3/issue/${operation.target}/transitions`, { transition: { id: match.id } });
+    if (response.status !== 204) throw new ConnectorError(`transition failed: HTTP ${response.status}`, "external-write-failed");
+    return this.#receipt(changeset, operation, {
+      external_target: operation.target, before_revision: null, result: `transitioned:${match.id}`,
+      readback_hash: null, after_revision: null
+    });
+  }
+
   /** §33.2 — receipts with redacted failure details and revision identity. */
   #receipt(changeset, operation, details) {
     return Object.freeze({
@@ -300,6 +361,8 @@ export class JiraConnector {
       operation_id: operation.operation_id,
       connection: changeset.connection,
       mapping_version: this.#mapping.version,
+      actor: this.#actor,
+      warnings: details.warnings ?? [],
       at: this.#now(),
       ...details
     });
@@ -312,41 +375,65 @@ export class JiraConnector {
    * atomically with persistence of the page it covers and never past a
    * failed or unpersisted page.
    */
+  /** Derive a valid JQL `updated >=` operand ("yyyy-MM-dd HH:mm") from a provider revision. */
+  static jqlWatermark(revision, fallback) {
+    const parsed = new Date(String(revision).replace(" ", "T"));
+    if (Number.isNaN(parsed.getTime())) return fallback;
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${parsed.getUTCFullYear()}-${pad(parsed.getUTCMonth() + 1)}-${pad(parsed.getUTCDate())} ${pad(parsed.getUTCHours())}:${pad(parsed.getUTCMinutes())}`;
+  }
+
   async poll(cursor, { persist }) {
     if (!persist) throw new ConnectorError("cursor advancement requires a persistence callback (§29.6)", "unrecoverable-configuration");
     const watermark = cursor.watermark ?? "1970-01-01 00:00";
     const jql = encodeURIComponent(`project = ${this.#mapping.projectKey} AND updated >= "${watermark}" ORDER BY updated ASC`);
-    const attempt = { ...cursor, last_attempted_at: this.#now() };
-    const response = await this.#request("GET", `/rest/api/3/search?jql=${jql}&startAt=${cursor.startAt ?? 0}`);
-    if (response.status === 410 || response.body?.errorMessages?.some((message) => /expired/i.test(message))) {
-      // Expired provider token: safe rescan from the declared recovery boundary.
-      const recovered = { ...attempt, startAt: 0, watermark: cursor.recovery_boundary ?? "1970-01-01 00:00", failure_state: "token-expired-rescan" };
-      await persist({ cursor: recovered, items: [] });
-      return { items: [], cursor: recovered, rescan: true };
+    let seen = new Set(cursor.seen ?? []);
+    let startAt = cursor.startAt ?? 0;
+    let working = { ...cursor, last_attempted_at: this.#now() };
+    const collected = [];
+    let lastRevision = null;
+    for (;;) {
+      const response = await this.#request("GET", `/rest/api/3/search?jql=${jql}&startAt=${startAt}`);
+      if (response.status === 410 || response.body?.errorMessages?.some((message) => /expired/i.test(message))) {
+        // Expired provider token: safe rescan from the declared recovery boundary.
+        const recovered = { ...working, startAt: 0, watermark: cursor.recovery_boundary ?? "1970-01-01 00:00", failure_state: "token-expired-rescan" };
+        await persist({ cursor: recovered, items: [] });
+        return { items: [], cursor: recovered, rescan: true };
+      }
+      if (response.status !== 200) {
+        // The cursor does NOT advance past the failed page; already-persisted
+        // pages stay persisted (§29.6 atomic per-page advancement).
+        const failed = { ...working, startAt, watermark: working.watermark ?? watermark, failure_state: `page-failed:${response.status}` };
+        await persist({ cursor: failed, items: [] });
+        throw new ConnectorError(`poll page failed: HTTP ${response.status}`, "external-write-failed");
+      }
+      const issues = response.body.issues ?? [];
+      const items = issues.map((issue) => ({
+        item_id: issue.key, provider_item_id: issue.id, revision: String(issue.fields?.updated ?? issue.id)
+      }));
+      // Dedup by immutable identity + revision, never timestamps alone (§29.6).
+      const fresh = items.filter((item) => !seen.has(`${item.provider_item_id}@${item.revision}`));
+      for (const item of fresh) seen.add(`${item.provider_item_id}@${item.revision}`);
+      if (items.length) lastRevision = items.at(-1).revision;
+      collected.push(...fresh);
+      const total = response.body.total ?? (startAt + items.length);
+      startAt += items.length;
+      const morePages = items.length > 0 && startAt < total;
+      // Retain seen entries that remain re-queryable under the inclusive
+      // watermark so eviction never re-emits boundary items.
+      const nextWatermark = morePages ? watermark : (lastRevision ? JiraConnector.jqlWatermark(lastRevision, watermark) : watermark);
+      working = {
+        ...working,
+        startAt: morePages ? startAt : 0,
+        watermark: nextWatermark,
+        seen: [...seen].filter((entry) => entry.split("@")[1] >= nextWatermark || [...seen].length <= 10000).slice(-10000),
+        last_success_at: this.#now(),
+        failure_state: null
+      };
+      await persist({ cursor: working, items: fresh });
+      if (!morePages) break;
     }
-    if (response.status !== 200) {
-      const failed = { ...attempt, failure_state: `page-failed:${response.status}` };
-      // The cursor position does NOT advance past the failed page.
-      await persist({ cursor: { ...failed, startAt: cursor.startAt ?? 0, watermark }, items: [] });
-      throw new ConnectorError(`poll page failed: HTTP ${response.status}`, "external-write-failed");
-    }
-    const items = (response.body.issues ?? []).map((issue) => ({
-      item_id: issue.key, provider_item_id: issue.id, revision: String(issue.fields?.updated ?? issue.id)
-    }));
-    // Dedup by immutable identity + revision, never timestamps alone (§29.6).
-    const seen = new Set(cursor.seen ?? []);
-    const fresh = items.filter((item) => !seen.has(`${item.provider_item_id}@${item.revision}`));
-    const nextWatermark = items.at(-1)?.revision?.slice(0, 16) ?? watermark;
-    const advanced = {
-      ...attempt,
-      startAt: 0,
-      watermark: nextWatermark,
-      seen: [...seen, ...fresh.map((item) => `${item.provider_item_id}@${item.revision}`)].slice(-10000),
-      last_success_at: this.#now(),
-      failure_state: null
-    };
-    await persist({ cursor: advanced, items: fresh });
-    return { items: fresh, cursor: advanced, rescan: false };
+    return { items: collected, cursor: working, rescan: false };
   }
 
   /** Full reconciliation refreshes every mapped item from a clean boundary (§29.6). */
