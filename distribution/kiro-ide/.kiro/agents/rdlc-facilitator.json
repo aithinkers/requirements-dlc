@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-facilitator",
+  "description": "Guide the engagement through its adaptive stages.",
+  "prompt": "rdlc-facilitator.md",
+  "host": "Kiro IDE"
+}

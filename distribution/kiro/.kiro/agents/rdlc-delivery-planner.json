@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-delivery-planner",
+  "description": "Decompose accepted requirements into delivery work.",
+  "prompt": "rdlc-delivery-planner.md",
+  "host": "Kiro CLI"
+}

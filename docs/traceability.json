@@ -400,6 +400,29 @@
         ],
         "tests": []
       }
+    },
+    {
+      "id": "FEAT-015",
+      "title": "Codex and Kiro (CLI + IDE) harness distributions",
+      "issue": 38,
+      "specification_sections": [
+        "§36",
+        "§36.1",
+        "§45.1"
+      ],
+      "status": "verified",
+      "evidence": {
+        "implementation": [
+          "scripts/generate-distribution.mjs",
+          "scripts/setup.mjs",
+          "distribution/codex/AGENTS.md",
+          "distribution/kiro/AGENTS.md",
+          "distribution/kiro-ide/AGENTS.md"
+        ],
+        "tests": [
+          "tests/governance/engagement.test.mjs"
+        ]
+      }
     }
   ]
 }

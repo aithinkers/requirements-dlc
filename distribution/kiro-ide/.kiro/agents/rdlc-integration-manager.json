@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-integration-manager",
+  "description": "Plan and verify external tracker synchronization.",
+  "prompt": "rdlc-integration-manager.md",
+  "host": "Kiro IDE"
+}

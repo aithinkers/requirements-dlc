@@ -238,3 +238,38 @@ test("FEAT-014: setup migrates the undiscovered 0.1.1 layout and the marketplace
   const plugin = JSON.parse(await readFile("distribution/claude-code/.claude-plugin/plugin.json", "utf8"));
   assert.equal(plugin.name, "rdlc");
 });
+
+test("FEAT-015: codex and kiro distributions generate from the same core with intact guarantees", async () => {
+  const { readdir } = await import("node:fs/promises");
+  assert.equal((await readdir("distribution/codex/.codex/prompts")).length, 26);
+  assert.equal((await readdir("distribution/codex/.codex/agents")).length, 20, "md + toml per role");
+  for (const host of ["kiro", "kiro-ide"]) {
+    assert.equal((await readdir(`distribution/${host}/.kiro/skills`)).length, 26);
+    assert.equal((await readdir(`distribution/${host}/.kiro/agents`)).length, 20, "md + json per role");
+  }
+  const codexAgent = await readFile("distribution/codex/.codex/agents/rdlc-facilitator.md", "utf8");
+  assert.match(codexAgent, /untrusted data/);
+  assert.match(codexAgent, /remains a proposal until integrated and gated/);
+  const toml = await readFile("distribution/codex/.codex/agents/rdlc-facilitator.toml", "utf8");
+  assert.match(toml, /^name = "rdlc-facilitator"/m);
+  const kiroSkill = await readFile("distribution/kiro/.kiro/skills/rdlc-sync/SKILL.md", "utf8");
+  assert.match(kiroSkill, /present the exact connection, organization, project, items, operations, and write policy/);
+  const ideSkill = await readFile("distribution/kiro-ide/.kiro/skills/rdlc-sync/SKILL.md", "utf8");
+  assert.match(ideSkill, /Kiro IDE/, "separate adapter, identical semantics (§36)");
+  const manifest = JSON.parse(await readFile("distribution/kiro/.kiro/agents/rdlc-facilitator.json", "utf8"));
+  assert.equal(manifest.prompt, "rdlc-facilitator.md");
+});
+
+test("FEAT-015: setup installs codex and kiro surfaces with the same semantics", async () => {
+  const { runSetup } = await import("../../scripts/setup.mjs");
+  const quiet = () => {};
+  const target = await mkdtemp(join(tmpdir(), "rdlc-hosts-"));
+  const codex = await runSetup({ target, tool: "codex", log: quiet });
+  assert.ok(codex.installed.includes(join(".codex", "prompts", "rdlc-start.md")));
+  assert.ok(codex.installed.includes(join(".codex", "agents", "rdlc-facilitator.toml")));
+  const kiro = await runSetup({ target, tool: "kiro-ide", log: quiet });
+  assert.ok(kiro.installed.includes(join(".kiro", "skills", "rdlc-start", "SKILL.md")));
+  // Idempotence per tool; unknown tools fail closed.
+  assert.equal((await runSetup({ target, tool: "codex", log: quiet })).installed.length, 0);
+  await assert.rejects(runSetup({ target, tool: "cursor", log: quiet }), /unknown tool/);
+});

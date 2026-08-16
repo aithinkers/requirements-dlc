@@ -8,8 +8,9 @@
  * overwritten without --force, and every action is reported.
  *
  * Usage:
- *   npx github:aithinkers/requirements-dlc [--target <dir>] [--force] [--check]
- *   node scripts/setup.mjs --target ~/my-project
+ *   npx github:aithinkers/requirements-dlc [--target <dir>] [--tool <host>] [--force] [--check]
+ *   Hosts: claude-code (default) | codex | kiro | kiro-ide  — codex and kiro
+ *   surfaces are experimental and outside the 0.1 conformance claim (§45.1).
  */
 
 import { createHash } from "node:crypto";
@@ -20,10 +21,13 @@ import process from "node:process";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
+const TOOLS = Object.freeze(["claude-code", "codex", "kiro", "kiro-ide"]);
+
 function parseArguments(argv) {
-  const options = { target: process.cwd(), force: false, check: false };
+  const options = { target: process.cwd(), tool: "claude-code", force: false, check: false };
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--target") options.target = resolve(argv[++index] ?? ".");
+    else if (argv[index] === "--tool") options.tool = argv[++index];
     else if (argv[index] === "--force") options.force = true;
     else if (argv[index] === "--check") options.check = true;
     else if (argv[index] === "--help" || argv[index] === "-h") options.help = true;
@@ -34,18 +38,39 @@ function parseArguments(argv) {
 
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
-async function listPluginFiles() {
-  // Claude Code discovers project commands in .claude/commands and agents in
-  // .claude/agents — NOT under .claude/plugins (issue #34). The plugin-shaped
-  // distribution/claude-code tree remains available for `claude plugin install`.
-  const base = join(packageRoot, "distribution", "claude-code");
-  const files = [];
-  for (const [directory, destination] of [["commands", join(".claude", "commands")], ["agents", join(".claude", "agents")]]) {
-    for (const name of await readdir(join(base, directory))) {
-      files.push({ source: join(base, directory, name), relative: join(destination, name) });
-    }
+async function walk(base, prefix = "") {
+  const entries = [];
+  for (const entry of await readdir(join(base, prefix), { withFileTypes: true })) {
+    const relative = join(prefix, entry.name);
+    if (entry.isDirectory()) entries.push(...await walk(base, relative));
+    else entries.push(relative);
   }
-  return files;
+  return entries;
+}
+
+async function listPluginFiles(tool) {
+  if (!TOOLS.includes(tool)) throw new Error(`unknown tool: ${tool} (expected ${TOOLS.join("|")})`);
+  if (tool === "claude-code") {
+    // Claude Code discovers project commands in .claude/commands and agents in
+    // .claude/agents — NOT under .claude/plugins (issue #34). The plugin-shaped
+    // distribution/claude-code tree remains available for `claude plugin install`.
+    const base = join(packageRoot, "distribution", "claude-code");
+    const files = [];
+    for (const [directory, destination] of [["commands", join(".claude", "commands")], ["agents", join(".claude", "agents")]]) {
+      for (const name of await readdir(join(base, directory))) {
+        files.push({ source: join(base, directory, name), relative: join(destination, name) });
+      }
+    }
+    return files;
+  }
+  // Codex and Kiro surfaces install their dot-directory trees verbatim
+  // (.codex/… or .kiro/…). Experimental outside the 0.1 conformance claim.
+  const base = join(packageRoot, "distribution", tool);
+  const dot = tool === "codex" ? ".codex" : ".kiro";
+  return (await walk(join(base, dot))).map((relative) => ({
+    source: join(base, dot, relative),
+    relative: join(dot, relative)
+  }));
 }
 
 /** §11 project scaffold with §47 recommended defaults. */
@@ -104,7 +129,7 @@ async function fileState(path, expected) {
   }
 }
 
-export async function runSetup({ target, force = false, check = false, log = console.log }) {
+export async function runSetup({ target, tool = "claude-code", force = false, check = false, log = console.log }) {
   const results = { installed: [], skipped: [], protected: [], scaffolded: [], drift: [] };
   let targetStat;
   try {
@@ -114,7 +139,7 @@ export async function runSetup({ target, force = false, check = false, log = con
   }
   if (!targetStat.isDirectory()) throw new Error(`target is not a directory: ${target}`);
 
-  const plan = await listPluginFiles();
+  const plan = await listPluginFiles(tool);
   const projectId = basename(resolve(target)) || "rdlc-project";
   plan.push({ content: projectManifest(projectId), relative: "requirements-project.yaml" });
 
@@ -160,7 +185,8 @@ export async function runSetup({ target, force = false, check = false, log = con
     }
   }
 
-  log(`R-DLC setup ${check ? "check" : "install"} for ${target}`);
+  log(`R-DLC setup ${check ? "check" : "install"} (${tool}) for ${target}`);
+  if (tool !== "claude-code" && !check) log("  note: this harness surface is experimental and outside the 0.1 conformance claim (§45.1)");
   if (check) {
     log(results.drift.length === 0 ? "  up to date" : results.drift.map((entry) => `  drift: ${entry.file} (${entry.state})`).join("\n"));
   } else {
@@ -179,7 +205,7 @@ export async function runSetup({ target, force = false, check = false, log = con
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    console.log(`Usage: rdlc-setup [--target <dir>] [--force] [--check]
+    console.log(`Usage: rdlc-setup [--target <dir>] [--tool claude-code|codex|kiro|kiro-ide] [--force] [--check]
 
 Exit codes: 0 success/up-to-date; 1 drift found (--check) or setup error;
 2 completed but user-modified files were protected (rerun with --force).`);

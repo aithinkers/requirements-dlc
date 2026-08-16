@@ -39,6 +39,22 @@ Prefer the plugin manager instead? From Claude Code:
 
 (both surfaces ship the same generated files; pick one per project).
 
+## Other harnesses (experimental)
+
+The same authored core renders for Codex CLI and Kiro (per §36, Kiro CLI and
+Kiro IDE are separate adapters with identical semantics):
+
+```bash
+npx github:aithinkers/requirements-dlc --tool codex      # → .codex/prompts + .codex/agents
+npx github:aithinkers/requirements-dlc --tool kiro       # → .kiro/skills + .kiro/agents
+npx github:aithinkers/requirements-dlc --tool kiro-ide
+```
+
+These surfaces are experimental and outside the 0.1 conformance claim
+(§45.1); harness conformance follows the §45.2/§45.3 roadmap. Engagement
+state is host-neutral (§34.5), so a project started in Claude Code resumes in
+any of them.
+
 ## First engagement
 
 Open the project in Claude Code:

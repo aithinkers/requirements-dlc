@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-portfolio-analyst",
+  "description": "Roll requirements and delivery up to portfolio views.",
+  "prompt": "rdlc-portfolio-analyst.md",
+  "host": "Kiro CLI"
+}

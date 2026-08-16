@@ -26,7 +26,8 @@
     "the initial semantic review (\u00a724.2) is the clearly labeled deterministic-heuristic reviewer in core/lib/semantic-review.mjs; its quality claims are published separately per \u00a744.2 and are not deterministic conformance",
     "\u00a713 relationship-record field breadth follows the \u00a712.3 verbatim example pending the erratum adjudication (issue #2 follow-up item 16)",
     "\u00a725 duplicate detection is the deterministic normalized-statement + external-identity subset (promotion gate); semantic similarity ranking is a \u00a744.2 evaluation concern",
-    "\u00a734.6 audit sharding is per-record audit trails in artifacts/leases; per-host JSONL shards land with multi-host harnesses (release 0.2+)"
+    "\u00a734.6 audit sharding is per-record audit trails in artifacts/leases; per-host JSONL shards land with multi-host harnesses (release 0.2+)",
+    "Codex, Kiro CLI, and Kiro IDE surfaces in distribution/{codex,kiro,kiro-ide} are experimental per \u00a745.1 and are NOT part of this conformance claim; harness claims follow \u00a745.2/\u00a745.3"
   ],
   "test_report": "npm test from a clean checkout; scale benchmark via node scripts/run-scale-benchmark.mjs",
   "scale_benchmark": {

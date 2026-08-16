@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-business-analyst",
+  "description": "Elicit, capture, and draft traceable requirements.",
+  "prompt": "rdlc-business-analyst.md",
+  "host": "Kiro CLI"
+}

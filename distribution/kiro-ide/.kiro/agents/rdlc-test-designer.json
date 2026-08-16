@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-test-designer",
+  "description": "Draft verification candidates from approved content.",
+  "prompt": "rdlc-test-designer.md",
+  "host": "Kiro IDE"
+}
