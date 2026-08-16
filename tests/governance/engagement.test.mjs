@@ -191,9 +191,9 @@ test("FEAT-013: setup installs the plugin and scaffold idempotently and protects
 
   const first = await runSetup({ target, log: quiet });
   assert.ok(first.installed.includes("requirements-project.yaml"));
-  assert.ok(first.installed.some((file) => file.endsWith(join("commands", "rdlc-start.md"))));
-  assert.ok(first.installed.some((file) => file.endsWith(join("agents", "rdlc-facilitator.md"))));
-  assert.ok(first.installed.some((file) => file.endsWith(join(".claude-plugin", "plugin.json"))));
+  assert.ok(first.installed.includes(join(".claude", "commands", "rdlc-start.md")), "commands land where Claude Code discovers them");
+  assert.ok(first.installed.includes(join(".claude", "agents", "rdlc-facilitator.md")), "agents land where Claude Code discovers them");
+  assert.ok(!first.installed.some((file) => file.includes(join(".claude", "plugins"))), "no undiscovered plugins/ path (issue #34)");
   assert.ok(first.scaffolded.includes("rdlc/spaces/main/engagements"));
   const manifest = await readFile(join(target, "requirements-project.yaml"), "utf8");
   assert.match(manifest, /authority_mode: files-authoritative/);
@@ -213,4 +213,28 @@ test("FEAT-013: setup installs the plugin and scaffold idempotently and protects
   const forced = await runSetup({ target, force: true, log: quiet });
   assert.deepEqual(forced.installed, ["requirements-project.yaml"]);
   await assert.rejects(runSetup({ target: join(target, "missing"), log: quiet }), /does not exist/);
+});
+
+test("FEAT-014: setup migrates the undiscovered 0.1.1 layout and the marketplace manifest resolves the plugin", async () => {
+  const { runSetup } = await import("../../scripts/setup.mjs");
+  const quiet = () => {};
+  const target = await mkdtemp(join(tmpdir(), "rdlc-migrate-"));
+  // Simulate a 0.1.1 install.
+  const legacy = join(target, ".claude", "plugins", "rdlc", "commands");
+  await (await import("node:fs/promises")).mkdir(legacy, { recursive: true });
+  await writeFile(join(legacy, "rdlc-start.md"), "legacy", "utf8");
+
+  const result = await runSetup({ target, log: quiet });
+  assert.match(result.migrated, /\.claude\/plugins\/rdlc$/);
+  await assert.rejects(readFile(join(legacy, "rdlc-start.md")), undefined, "legacy copy removed");
+  const discovered = await readFile(join(target, ".claude", "commands", "rdlc-start.md"), "utf8");
+  assert.match(discovered, /rdlc-start/);
+  const agents = await (await import("node:fs/promises")).readdir(join(target, ".claude", "agents"));
+  assert.equal(agents.length, 10);
+
+  const marketplace = JSON.parse(await readFile(".claude-plugin/marketplace.json", "utf8"));
+  assert.equal(marketplace.plugins[0].name, "rdlc");
+  assert.equal(marketplace.plugins[0].source, "./dist/claude-code");
+  const plugin = JSON.parse(await readFile("dist/claude-code/.claude-plugin/plugin.json", "utf8"));
+  assert.equal(plugin.name, "rdlc");
 });

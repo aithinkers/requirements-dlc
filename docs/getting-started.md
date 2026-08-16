@@ -23,12 +23,21 @@ codes: `0` success or up-to-date, `1` drift found or setup error, `2`
 completed but user-modified files were protected. It
 installs:
 
-- `.claude/plugins/rdlc/` — the Claude Code plugin: 26 `/rdlc-*` commands and
-  the ten §38 role agents, generated from the authored core and byte-exact
-  drift-protected
+- `.claude/commands/` and `.claude/agents/` — the 26 `/rdlc-*` commands and
+  ten §38 role agents, placed where Claude Code auto-discovers them
+  (generated from the authored core and byte-exact drift-protected)
 - `requirements-project.yaml` — a §47-defaults project manifest
   (files-authoritative, propose-only connectors, untrusted external content)
 - `rdlc/` — the §11 space/engagement layout
+
+Prefer the plugin manager instead? From Claude Code:
+
+```
+/plugin marketplace add aithinkers/requirements-dlc
+/plugin install rdlc@rdlc
+```
+
+(both surfaces ship the same generated files; pick one per project).
 
 ## First engagement
 
