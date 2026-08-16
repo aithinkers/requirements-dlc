@@ -113,7 +113,7 @@ export function normalizeValue(value, hints = {}, path = "$") {
     for (const [rawKey, entry] of Object.entries(value)) {
       if (entry === undefined) continue;
       const key = rawKey.normalize("NFC");
-      if (key !== rawKey && Object.hasOwn(value, key)) {
+      if (Object.hasOwn(result, key)) {
         throw new CanonicalizationError(`NFC key collision at ${path}.${key}`);
       }
       const childPath = `${path}.${key}`;

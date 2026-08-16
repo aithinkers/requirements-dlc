@@ -76,6 +76,12 @@ test("FEAT-003: object keys are NFC-normalized and collisions fail closed", () =
     () => canonicalBytes({ [composedKey]: 1, [decomposedKey]: 2 }),
     CanonicalizationError
   );
+  // Two distinct non-NFC raw keys converging on one NFC key must also fail
+  // closed even when the composed form is absent from the source object.
+  assert.throws(
+    () => canonicalBytes({ "\u212B": "angstrom", "A\u030A": "a-ring" }),
+    CanonicalizationError
+  );
 });
 
 test("FEAT-003: set-sort ties break deterministically, independent of producer order", () => {
