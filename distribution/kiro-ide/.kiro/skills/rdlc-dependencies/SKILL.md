@@ -1,6 +1,6 @@
 ---
 name: rdlc-dependencies
-description: Generate and review dependency planning.
+description: "Generate and review dependency planning."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

@@ -1,5 +1,5 @@
 ---
-description: Declare, inspect, renew, or release an advisory work claim.
+description: "Declare, inspect, renew, or release an advisory work claim."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

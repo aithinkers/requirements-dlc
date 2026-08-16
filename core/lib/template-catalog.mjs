@@ -95,10 +95,15 @@ export class TemplateCatalog {
     const resolved = this.resolve(mapping.artifact_type);
     const projected = { type: mapping.artifact_type };
     for (const [templateField, providerPath] of Object.entries(mapping.fields)) {
-      projected[templateField] = providerPath.split(".").reduce(
-        (value, key) => (value === undefined || value === null ? undefined : value[key]),
-        snapshot.fields ?? {}
-      );
+      const fields = snapshot.fields ?? {};
+      // Literal field names win (ADO's System.Title contains dots); dotted
+      // traversal applies only when no literal key exists.
+      projected[templateField] = Object.hasOwn(fields, providerPath)
+        ? fields[providerPath]
+        : providerPath.split(".").reduce(
+            (value, key) => (value === undefined || value === null ? undefined : value[key]),
+            fields
+          );
     }
     const failures = validateAgainstTemplate(projected, resolved);
     const findings = failures.map((failure) => {

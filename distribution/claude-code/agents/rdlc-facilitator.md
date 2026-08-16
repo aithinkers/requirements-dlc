@@ -1,6 +1,6 @@
 ---
 name: rdlc-facilitator
-description: Guide the engagement through its adaptive stages.
+description: "Guide the engagement through its adaptive stages."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

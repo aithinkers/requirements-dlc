@@ -1,5 +1,5 @@
 ---
-description: Gather document, tracker, stakeholder, and optional KB evidence.
+description: "Gather document, tracker, stakeholder, and optional KB evidence."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

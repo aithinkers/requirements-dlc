@@ -1,5 +1,5 @@
 ---
-description: Review newly imported source and tracker comments.
+description: "Review newly imported source and tracker comments."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

@@ -1,6 +1,6 @@
 ---
 name: rdlc-delivery-planner
-description: Decompose accepted requirements into delivery work.
+description: "Decompose accepted requirements into delivery work."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

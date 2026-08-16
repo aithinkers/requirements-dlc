@@ -1,6 +1,6 @@
 ---
 name: rdlc-test-designer
-description: Draft verification candidates from approved content.
+description: "Draft verification candidates from approved content."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

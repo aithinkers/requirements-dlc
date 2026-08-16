@@ -128,3 +128,60 @@ test("FEAT-017: mapping paths are confined to the project root; errors carry con
   const badYaml = await projectWith("{{{{not yaml");
   await assert.rejects(loadConnectorConfig(badYaml), (error) => /not valid YAML/.test(error.message) && !/not yaml/.test(error.message));
 });
+
+test("FEAT-018: azure-devops mappings validate, load, and power template checks; runtime stays roadmap", async () => {
+  const YAML = (await import("yaml")).default;
+  const { runSetup } = await import("../../scripts/setup.mjs");
+  const target = await mkdtemp(join(tmpdir(), "rdlc-ado-"));
+  await runSetup({ target, log: () => {} });
+  const example = await (await import("node:fs/promises")).readFile(join(target, "config", "connectors", "azure-devops-example.yaml"), "utf8");
+  const parsed = YAML.parse(example);
+  assert.equal(parsed.provider, "azure-devops");
+  assert.match(example, /roadmap \(§45\.3\)/, "runtime status is stated, not implied");
+  assert.deepEqual(validateMapping(parsed, { catalogTypes: catalog.types() }), []);
+
+  // Declared and loaded end to end.
+  await writeFile(join(target, "requirements-project.yaml"),
+    (await (await import("node:fs/promises")).readFile(join(target, "requirements-project.yaml"), "utf8"))
+      .replace("connectors: []", "connectors:\n  - id: boards\n    provider: azure-devops\n    mapping: config/connectors/azure-devops-example.yaml\n    write_mode: read-only"), "utf8");
+  const [ado] = await loadConnectorConfig(target, { catalogTypes: catalog.types(), confirmers: [confirmer] });
+  assert.equal(ado.provider, "azure-devops");
+  assert.equal(ado.estimation.provider_field, "Microsoft.VSTS.Scheduling.StoryPoints");
+  // Snapshot-level validation works against ADO field names today.
+  const result = catalog.validateProviderItem(
+    { item_id: "1042", revision: "7", fields: { "System.Title": "Preserve cart" } },
+    ado.templateMappings.story
+  );
+  assert.ok(result.findings.some((finding) => finding.provider_field === "Microsoft.VSTS.Common.AcceptanceCriteria"));
+
+  // Unknown providers and missing ADO organization fail closed.
+  assert.ok(validateMapping({ ...parsed, provider: "linear" }).some((failure) => /unknown provider/.test(failure)));
+  const { organization, ...withoutOrg } = parsed;
+  assert.ok(validateMapping(withoutOrg).some((failure) => /require the organization/.test(failure)));
+});
+
+test("FEAT-018: the setup-connector skill ships with the Jira and ADO walkthrough in every harness", async () => {
+  const fs = await import("node:fs/promises");
+  for (const path of [
+    "distribution/claude-code/commands/rdlc-setup-connector.md",
+    "distribution/codex/.codex/prompts/rdlc-setup-connector.md",
+    "distribution/kiro/.kiro/skills/rdlc-setup-connector/SKILL.md",
+    "distribution/kiro-ide/.kiro/skills/rdlc-setup-connector/SKILL.md"
+  ]) {
+    const body = await fs.readFile(path, "utf8");
+    assert.match(body, /rdlc:integration-manager/, path);
+    assert.match(body, /Microsoft\.VSTS\.Scheduling\.StoryPoints/, path);
+    assert.match(body, /createmeta/, path);
+    assert.match(body, /write_mode: propose/, path);
+    assert.match(body, /Never place credentials/, path);
+  }
+  // An authored body without a matching command fails the drift check.
+  const stray = "core/commands/bodies/nonexistent.md";
+  await fs.writeFile(stray, "orphan", "utf8");
+  try {
+    const { execFileSync } = await import("node:child_process");
+    assert.throws(() => execFileSync("node", ["scripts/generate-distribution.mjs", "--check"], { stdio: "pipe" }), (error) => error.status === 1);
+  } finally {
+    await fs.rm(stray);
+  }
+});

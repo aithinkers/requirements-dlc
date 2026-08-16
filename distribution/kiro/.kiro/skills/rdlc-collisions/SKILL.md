@@ -1,6 +1,6 @@
 ---
 name: rdlc-collisions
-description: Detect and resolve concurrent and semantic collisions.
+description: "Detect and resolve concurrent and semantic collisions."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

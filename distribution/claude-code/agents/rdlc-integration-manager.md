@@ -1,6 +1,6 @@
 ---
 name: rdlc-integration-manager
-description: Plan and verify external tracker synchronization.
+description: "Plan and verify external tracker synchronization."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

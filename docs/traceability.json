@@ -469,6 +469,32 @@
           "tests/governance/connector-config.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-018",
+      "title": "Guided connector-setup skill with Jira and Azure DevOps support",
+      "issue": 44,
+      "specification_sections": [
+        "§18.1",
+        "§20.1",
+        "§22.2",
+        "§29",
+        "§32",
+        "§36"
+      ],
+      "status": "verified",
+      "evidence": {
+        "implementation": [
+          "core/commands/bodies/setup-connector.md",
+          "core/lib/connector-config.mjs",
+          "scripts/setup.mjs",
+          "distribution/claude-code/commands/rdlc-setup-connector.md"
+        ],
+        "tests": [
+          "tests/governance/connector-config.test.mjs",
+          "tests/governance/engagement.test.mjs"
+        ]
+      }
     }
   ]
 }

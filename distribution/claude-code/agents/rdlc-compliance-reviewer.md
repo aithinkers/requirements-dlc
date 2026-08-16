@@ -1,6 +1,6 @@
 ---
 name: rdlc-compliance-reviewer
-description: Check policy, privacy, retention, and rights impact.
+description: "Check policy, privacy, retention, and rights impact."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

@@ -79,7 +79,10 @@ test("REL-001: the §46 scenario runs end to end on the implemented slices", asy
   const mapping = { version: "jira-com/v1", projectKey: "COM", fields: ["summary", "status"] };
   const discovery = new JiraConnector({
     transport: recordedTransport([
-      { method: "GET", path: "/rest/api/3/issue/createmeta?projectKeys=COM&expand=projects.issuetypes.fields", response: { status: 200, body: fixture.createmeta } },
+      { method: "GET", path: "/rest/api/3/issue/createmeta/COM/issuetypes", response: { status: 200, body: fixture.createmeta_issuetypes } },
+      { method: "GET", path: "/rest/api/3/issue/createmeta/COM/issuetypes/10001", response: { status: 200, body: fixture.createmeta_fields["10001"] } },
+      { method: "GET", path: "/rest/api/3/issue/createmeta/COM/issuetypes/10002", response: { status: 200, body: fixture.createmeta_fields["10002"] } },
+      { method: "GET", path: "/rest/api/3/issue/createmeta/COM/issuetypes/10003", response: { status: 200, body: fixture.createmeta_fields["10003"] } },
       { method: "GET", path: "/rest/api/3/myself", response: { status: 200, body: fixture.myself } }
     ]),
     mapping

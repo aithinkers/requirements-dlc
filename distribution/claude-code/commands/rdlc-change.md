@@ -1,5 +1,5 @@
 ---
-description: Analyze and govern a baseline change.
+description: "Analyze and govern a baseline change."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

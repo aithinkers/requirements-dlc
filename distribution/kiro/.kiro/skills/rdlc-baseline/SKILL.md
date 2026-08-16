@@ -1,6 +1,6 @@
 ---
 name: rdlc-baseline
-description: Create an immutable approved baseline.
+description: "Create an immutable approved baseline."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

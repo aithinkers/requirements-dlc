@@ -1,6 +1,6 @@
 ---
 name: rdlc-draft
-description: Draft or revise requirements and related artifacts.
+description: "Draft or revise requirements and related artifacts."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

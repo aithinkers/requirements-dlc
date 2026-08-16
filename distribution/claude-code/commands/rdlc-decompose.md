@@ -1,5 +1,5 @@
 ---
-description: Create planning hierarchy, stories, and tasks.
+description: "Create planning hierarchy, stories, and tasks."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

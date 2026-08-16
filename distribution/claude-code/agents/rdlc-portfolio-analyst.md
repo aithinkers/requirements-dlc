@@ -1,6 +1,6 @@
 ---
 name: rdlc-portfolio-analyst
-description: Roll requirements and delivery up to portfolio views.
+description: "Roll requirements and delivery up to portfolio views."
 ---
 
 <!-- GENERATED from core/roles/roles.json — do not hand-edit (§36). -->

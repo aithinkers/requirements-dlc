@@ -1,5 +1,5 @@
 ---
-description: Validate graph links and produce coverage.
+description: "Validate graph links and produce coverage."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

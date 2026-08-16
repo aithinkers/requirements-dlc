@@ -23,7 +23,7 @@ codes: `0` success or up-to-date, `1` drift found or setup error, `2`
 completed but user-modified files were protected. It
 installs:
 
-- `.claude/commands/` and `.claude/agents/` — the 26 `/rdlc-*` commands and
+- `.claude/commands/` and `.claude/agents/` — the 27 `/rdlc-*` commands and
   ten §38 role agents, placed where Claude Code auto-discovers them
   (generated from the authored core and byte-exact drift-protected)
 - `requirements-project.yaml` — a §47-defaults project manifest
@@ -109,7 +109,16 @@ review findings with dispositions — never silent repair.
 
 ## Configuring a connector (fields, components, story points)
 
-Setup scaffolds `config/connectors/jira-example.yaml`. Copy it, fill in your
+The easiest path: run **`/rdlc-setup-connector`** in Claude Code (or its
+Codex/Kiro render) — a guided §18.1 walkthrough that discovers fields (Jira
+createmeta / ADO field API or well-known defaults), asks the estimation,
+components, and binding questions in small batches, writes the mapping file,
+declares it in the manifest, and validates the result. Both **Jira Cloud**
+and **Azure DevOps** are supported (ADO: configuration, template validation,
+and format-drift today; runtime synchronization is §45.3 roadmap).
+
+Manually instead: setup scaffolds `config/connectors/jira-example.yaml` and
+`config/connectors/azure-devops-example.yaml`. Copy one, fill in your
 project key, fields, and bindings, and declare it in
 `requirements-project.yaml`:
 

@@ -1,6 +1,6 @@
 ---
 name: rdlc-tests
-description: Generate or review test candidates.
+description: "Generate or review test candidates."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

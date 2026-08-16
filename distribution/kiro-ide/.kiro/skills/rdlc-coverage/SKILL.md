@@ -1,6 +1,6 @@
 ---
 name: rdlc-coverage
-description: Show requirement- and criterion-level working, draft, and approved coverage.
+description: "Show requirement- and criterion-level working, draft, and approved coverage."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->

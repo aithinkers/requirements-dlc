@@ -1,6 +1,6 @@
 ---
 name: rdlc-dedupe
-description: Generate and adjudicate duplicate candidates.
+description: "Generate and adjudicate duplicate candidates."
 ---
 
 <!-- GENERATED from core/commands/commands.json — do not hand-edit (§36). -->
