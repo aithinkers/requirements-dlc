@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-compliance-reviewer",
+  "description": "Check policy, privacy, retention, and rights impact.",
+  "prompt": "rdlc-compliance-reviewer.md",
+  "host": "Kiro CLI"
+}

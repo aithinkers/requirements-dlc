@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-traceability-auditor",
+  "description": "Audit the trace graph and coverage.",
+  "prompt": "rdlc-traceability-auditor.md",
+  "host": "Kiro IDE"
+}

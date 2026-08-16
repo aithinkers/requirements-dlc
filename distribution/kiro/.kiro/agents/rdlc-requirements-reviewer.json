@@ -1,0 +1,6 @@
+{
+  "name": "rdlc-requirements-reviewer",
+  "description": "Run deterministic and semantic quality review.",
+  "prompt": "rdlc-requirements-reviewer.md",
+  "host": "Kiro CLI"
+}
