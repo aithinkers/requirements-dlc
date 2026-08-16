@@ -151,3 +151,35 @@ test("FEAT-011: a crash between breadcrumb and state renames is reported as inte
   }), "utf8");
   await assert.rejects(loadEngagement(directory), /interrupted checkpoint is suspected.*apply changeset CS-1/);
 });
+
+test("FEAT-012: all ten §38 role lenses generate as agents with the untrusted-content and proposal rules", async () => {
+  const roles = JSON.parse(await readFile("core/roles/roles.json", "utf8"));
+  assert.equal(roles.roles.length, 10);
+  const expected = ["facilitator", "business-analyst", "product-owner", "portfolio-analyst", "requirements-reviewer", "traceability-auditor", "test-designer", "integration-manager", "compliance-reviewer", "delivery-planner"];
+  assert.deepEqual(roles.roles.map((role) => role.id), expected);
+  for (const role of expected) {
+    const body = await readFile(`dist/claude-code/agents/rdlc-${role}.md`, "utf8");
+    assert.match(body, /GENERATED from core\/roles\/roles.json/);
+    assert.match(body, /untrusted data/);
+    assert.match(body, /remains a proposal until integrated and gated/);
+    assert.match(body, /never set\napproved, baselined, or waived/);
+  }
+});
+
+test("FEAT-012: the plugin manifest points at generated agents and commands and is drift-protected", async () => {
+  const manifest = JSON.parse(await readFile("dist/claude-code/.claude-plugin/plugin.json", "utf8"));
+  assert.equal(manifest.name, "rdlc");
+  assert.equal(manifest.agents, "./agents");
+  assert.equal(manifest.commands, "./commands");
+  const target = "dist/claude-code/agents/rdlc-facilitator.md";
+  const original = await readFile(target, "utf8");
+  try {
+    await writeFile(target, original + "edit\n", "utf8");
+    assert.throws(
+      () => execFileSync("node", ["scripts/generate-distribution.mjs", "--check"], { stdio: "pipe" }),
+      (error) => error.status === 1
+    );
+  } finally {
+    await writeFile(target, original, "utf8");
+  }
+});

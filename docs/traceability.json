@@ -305,6 +305,28 @@
         "implementation": [],
         "tests": []
       }
+    },
+    {
+      "id": "FEAT-012",
+      "title": "§38 role agents and Claude Code plugin distribution",
+      "issue": 29,
+      "specification_sections": [
+        "§38",
+        "§36",
+        "§7.8"
+      ],
+      "status": "verified",
+      "evidence": {
+        "implementation": [
+          "core/roles/roles.json",
+          "scripts/generate-distribution.mjs",
+          "dist/claude-code/.claude-plugin/plugin.json",
+          "dist/claude-code/agents/rdlc-facilitator.md"
+        ],
+        "tests": [
+          "tests/governance/engagement.test.mjs"
+        ]
+      }
     }
   ]
 }
