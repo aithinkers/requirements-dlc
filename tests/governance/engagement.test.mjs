@@ -183,3 +183,34 @@ test("FEAT-012: the plugin manifest points at generated agents and commands and 
     await writeFile(target, original, "utf8");
   }
 });
+
+test("FEAT-013: setup installs the plugin and scaffold idempotently and protects user edits", async () => {
+  const { runSetup } = await import("../../scripts/setup.mjs");
+  const target = await mkdtemp(join(tmpdir(), "rdlc-setup-"));
+  const quiet = () => {};
+
+  const first = await runSetup({ target, log: quiet });
+  assert.ok(first.installed.includes("requirements-project.yaml"));
+  assert.ok(first.installed.some((file) => file.endsWith(join("commands", "rdlc-start.md"))));
+  assert.ok(first.installed.some((file) => file.endsWith(join("agents", "rdlc-facilitator.md"))));
+  assert.ok(first.installed.some((file) => file.endsWith(join(".claude-plugin", "plugin.json"))));
+  assert.ok(first.scaffolded.includes("rdlc/spaces/main/engagements"));
+  const manifest = await readFile(join(target, "requirements-project.yaml"), "utf8");
+  assert.match(manifest, /authority_mode: files-authoritative/);
+  assert.match(manifest, /external_content: untrusted/);
+
+  // Idempotent: a second run changes nothing.
+  const second = await runSetup({ target, log: quiet });
+  assert.equal(second.installed.length, 0);
+  assert.equal(second.scaffolded.length, 0);
+  assert.equal((await runSetup({ target, check: true, log: quiet })).drift.length, 0);
+
+  // User-modified files are protected without --force.
+  await writeFile(join(target, "requirements-project.yaml"), manifest + "# my edit\n", "utf8");
+  const third = await runSetup({ target, log: quiet });
+  assert.deepEqual(third.protected, ["requirements-project.yaml"]);
+  assert.match(await readFile(join(target, "requirements-project.yaml"), "utf8"), /# my edit/);
+  const forced = await runSetup({ target, force: true, log: quiet });
+  assert.deepEqual(forced.installed, ["requirements-project.yaml"]);
+  await assert.rejects(runSetup({ target: join(target, "missing"), log: quiet }), /does not exist/);
+});
