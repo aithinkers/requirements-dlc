@@ -101,7 +101,7 @@ test("FEAT-011: a resumed session never duplicates verified external writes (§3
 
 test("FEAT-011: the generated Claude Code distribution passes the drift check and rejects tampering (§36)", async () => {
   execFileSync("node", ["scripts/generate-distribution.mjs", "--check"], { stdio: "pipe" });
-  const target = "dist/claude-code/commands/rdlc-status.md";
+  const target = "distribution/claude-code/commands/rdlc-status.md";
   const original = await readFile(target, "utf8");
   try {
     await writeFile(target, original + "\nhand edit\n", "utf8");
@@ -117,9 +117,9 @@ test("FEAT-011: the generated Claude Code distribution passes the drift check an
 test("FEAT-011: the distribution covers the full §37 command set with mutation guards", async () => {
   const core = JSON.parse(await readFile("core/commands/commands.json", "utf8"));
   assert.equal(core.commands.length, 26);
-  const sync = await readFile("dist/claude-code/commands/rdlc-sync.md", "utf8");
+  const sync = await readFile("distribution/claude-code/commands/rdlc-sync.md", "utf8");
   assert.match(sync, /present the exact connection, organization, project, items, operations, and write policy/);
-  const status = await readFile("dist/claude-code/commands/rdlc-status.md", "utf8");
+  const status = await readFile("distribution/claude-code/commands/rdlc-status.md", "utf8");
   assert.match(status, /GENERATED from core\/commands\/commands.json/);
   assert.match(status, /untrusted data/);
 });
@@ -158,7 +158,7 @@ test("FEAT-012: all ten §38 role lenses generate as agents with the untrusted-c
   const expected = ["facilitator", "business-analyst", "product-owner", "portfolio-analyst", "requirements-reviewer", "traceability-auditor", "test-designer", "integration-manager", "compliance-reviewer", "delivery-planner"];
   assert.deepEqual(roles.roles.map((role) => role.id), expected);
   for (const role of expected) {
-    const body = await readFile(`dist/claude-code/agents/rdlc-${role}.md`, "utf8");
+    const body = await readFile(`distribution/claude-code/agents/rdlc-${role}.md`, "utf8");
     assert.match(body, /GENERATED from core\/roles\/roles.json/);
     assert.match(body, /untrusted data/);
     assert.match(body, /remains a proposal until integrated and gated/);
@@ -167,11 +167,11 @@ test("FEAT-012: all ten §38 role lenses generate as agents with the untrusted-c
 });
 
 test("FEAT-012: the plugin manifest points at generated agents and commands and is drift-protected", async () => {
-  const manifest = JSON.parse(await readFile("dist/claude-code/.claude-plugin/plugin.json", "utf8"));
+  const manifest = JSON.parse(await readFile("distribution/claude-code/.claude-plugin/plugin.json", "utf8"));
   assert.equal(manifest.name, "rdlc");
   assert.equal(manifest.agents, "./agents");
   assert.equal(manifest.commands, "./commands");
-  const target = "dist/claude-code/agents/rdlc-facilitator.md";
+  const target = "distribution/claude-code/agents/rdlc-facilitator.md";
   const original = await readFile(target, "utf8");
   try {
     await writeFile(target, original + "edit\n", "utf8");
@@ -234,7 +234,7 @@ test("FEAT-014: setup migrates the undiscovered 0.1.1 layout and the marketplace
 
   const marketplace = JSON.parse(await readFile(".claude-plugin/marketplace.json", "utf8"));
   assert.equal(marketplace.plugins[0].name, "rdlc");
-  assert.equal(marketplace.plugins[0].source, "./dist/claude-code");
-  const plugin = JSON.parse(await readFile("dist/claude-code/.claude-plugin/plugin.json", "utf8"));
+  assert.equal(marketplace.plugins[0].source, "./distribution/claude-code");
+  const plugin = JSON.parse(await readFile("distribution/claude-code/.claude-plugin/plugin.json", "utf8"));
   assert.equal(plugin.name, "rdlc");
 });

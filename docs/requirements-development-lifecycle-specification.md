@@ -2726,7 +2726,7 @@ profiles/
 templates/
 examples/
 scripts/
-dist/
+distribution/
 ```
 
 `core/` is authoritative. Generated host distributions MUST pass a drift check

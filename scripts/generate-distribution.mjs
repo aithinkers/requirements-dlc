@@ -11,7 +11,7 @@ import { join } from "node:path";
 import process from "node:process";
 
 const CHECK = process.argv.includes("--check");
-const ROOT = "dist/claude-code";
+const ROOT = "distribution/claude-code";
 const OUT = `${ROOT}/commands`;
 const AGENTS = `${ROOT}/agents`;
 const PLUGIN = `${ROOT}/.claude-plugin`;

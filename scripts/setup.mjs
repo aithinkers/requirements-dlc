@@ -37,8 +37,8 @@ const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 async function listPluginFiles() {
   // Claude Code discovers project commands in .claude/commands and agents in
   // .claude/agents — NOT under .claude/plugins (issue #34). The plugin-shaped
-  // dist/claude-code tree remains available for `claude plugin install`.
-  const base = join(packageRoot, "dist", "claude-code");
+  // distribution/claude-code tree remains available for `claude plugin install`.
+  const base = join(packageRoot, "distribution", "claude-code");
   const files = [];
   for (const [directory, destination] of [["commands", join(".claude", "commands")], ["agents", join(".claude", "agents")]]) {
     for (const name of await readdir(join(base, directory))) {
