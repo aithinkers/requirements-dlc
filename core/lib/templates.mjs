@@ -26,9 +26,23 @@ export function resolveTemplate(packs) {
   for (const pack of ordered) {
     if (!PACK_ORDER.includes(pack.level)) throw new TemplateError(`unknown pack level: ${pack.level}`);
     if (!pack.version) throw new TemplateError(`pack at level ${pack.level} requires a version (§39)`);
+    // Canonicalize lock literals at creation: a locked field must use strict
+    // canonical constraint forms or it cannot be trusted as a lock.
+    for (const [name, definition] of Object.entries(pack.fields ?? {})) {
+      if (definition.locked) {
+        if ("required" in definition && typeof definition.required !== "boolean") {
+          throw new TemplateError(`locked field ${name} declares a non-boolean required constraint`);
+        }
+        if ("allowed_values" in definition && !Array.isArray(definition.allowed_values)) {
+          throw new TemplateError(`locked field ${name} declares a non-array allowed_values constraint`);
+        }
+      }
+    }
   }
-  const fields = {};
-  const provenance = {};
+  // Null-prototype accumulators: a field literally named __proto__ is data,
+  // never prototype mutation (review LOW follow-up).
+  const fields = Object.create(null);
+  const provenance = Object.create(null);
   for (const pack of ordered) {
     for (const [name, definition] of Object.entries(pack.fields ?? {})) {
       const existing = fields[name];
@@ -56,9 +70,9 @@ export function resolveTemplate(packs) {
     }
   }
   return {
-    fields,
+    fields: { ...fields },
     // §39 — the source and version of every active rule is exposed.
-    provenance,
+    provenance: { ...provenance },
     locked: Object.fromEntries(Object.entries(fields).filter(([, definition]) => definition.locked).map(([name]) => [name, provenance[name]]))
   };
 }

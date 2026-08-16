@@ -330,3 +330,11 @@ test("REL-002/templates: locked-field weakening is rejected for arbitrary litera
   const corrupt = { fields: { priority: { allowed_values: "abcdefz" } }, provenance: {}, locked: {} };
   assert.ok(validateAgainstTemplate({ priority: "z" }, corrupt).some((failure) => /template defect/.test(failure)));
 });
+
+test("REL-002/templates: __proto__ field names are data; malformed lock literals are refused (review LOW follow-ups)", () => {
+  const resolved = resolveTemplate([{ level: "framework", version: "f/v1", fields: { ["__proto__"]: { required: true }, statement: { required: true } } }]);
+  assert.equal(Object.prototype.required, undefined, "no prototype pollution");
+  assert.ok("statement" in resolved.fields);
+  assert.throws(() => resolveTemplate([{ level: "organization", version: "o/v1", fields: { x: { locked: true, required: 1 } } }]), /non-boolean required/);
+  assert.throws(() => resolveTemplate([{ level: "organization", version: "o/v1", fields: { x: { locked: true, allowed_values: "ab" } } }]), /non-array allowed_values/);
+});
