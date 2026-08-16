@@ -35,8 +35,15 @@ export const DEFAULT_SCAN_PROFILE = Object.freeze({
   maxRowsPerSheet: 200,
   maxDiagramPages: 10,
   maxShapes: 2000,
-  maxAnimationFrames: 20
+  maxAnimationFrames: 20,
+  maxInflatedBytes: 100 * 1024 * 1024
 });
+
+function deadline(startedAt, profile) {
+  if (Date.now() - startedAt > profile.maxMillis) {
+    throw new IntakeError(`extraction exceeded the bounded time budget (${profile.maxMillis}ms)`, "bounded-limit");
+  }
+}
 
 function sha256(bytes) {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
@@ -71,12 +78,29 @@ function secureXml(text, onElement, onText, onClose) {
   if (failure) throw new IntakeError(`XML cannot be parsed safely: ${failure.message}`);
 }
 
-function unzipSafely(bytes) {
+function unzipSafely(bytes, profile = DEFAULT_SCAN_PROFILE) {
+  let inflatedTotal = 0;
+  let bombed = null;
+  let entries;
   try {
-    return unzipSync(new Uint8Array(bytes));
+    entries = unzipSync(new Uint8Array(bytes), {
+      filter(file) {
+        // Zip-bomb guard: the byte limit applies to INFLATED size, not just
+        // the compressed container (§16.2.1 "stop at the first applicable
+        // configured limit").
+        inflatedTotal += file.originalSize ?? 0;
+        if ((file.originalSize ?? 0) > profile.maxInflatedBytes || inflatedTotal > profile.maxInflatedBytes) {
+          bombed = `${file.name}: inflated size exceeds the bounded-scan limit`;
+          return false;
+        }
+        return true;
+      }
+    });
   } catch (error) {
     throw new IntakeError(`container is corrupted or truncated: ${error.message}`, "corrupted");
   }
+  if (bombed) throw new IntakeError(bombed, "bounded-limit");
+  return entries;
 }
 
 function xmlText(xml) {
@@ -176,7 +200,10 @@ function extractCsv(source, bytes, profile, units) {
   }
   const totalLines = text.split(/\r?\n/).filter((line) => line.trim()).length;
   units.discovered.push(`rows:${totalLines}`);
-  if (totalLines > records.length) units.omitted.push(`rows ${records.length + 1}-${totalLines}`);
+  if (totalLines > records.length) {
+    units.omitted.push(`rows ${records.length + 1}-${totalLines}`);
+    units.partially_processed.push("csv");
+  }
   const fragments = records.map((row, index) => fragment(source, {
     path: `row:${index + 1}`,
     locator: `row ${index + 1}`,
@@ -234,18 +261,35 @@ function sharedStrings(entries) {
   return strings;
 }
 
-function extractXlsx(source, entries, profile, units) {
+function extractXlsx(source, entries, profile, units, startedAt = Date.now()) {
   if (Object.keys(entries).some((name) => name.toLowerCase().includes("vbaproject"))) {
     throw new IntakeError("macro-enabled workbook fails closed by default policy (§16.2)", "macro-enabled");
   }
   const strings = sharedStrings(entries);
+  // §16.2: identify sheets, used ranges, formulas, cached values, tables,
+  // charts, named ranges, and hidden content.
+  const workbookXml = Buffer.from(entries["xl/workbook.xml"] ?? new Uint8Array()).toString("utf8");
+  const hiddenSheets = [...workbookXml.matchAll(/<sheet [^>]*state="(?:hidden|veryHidden)"[^>]*name="([^"]+)"|<sheet [^>]*name="([^"]+)"[^>]*state="(?:hidden|veryHidden)"/g)]
+    .map((match) => match[1] ?? match[2]);
+  for (const hidden of hiddenSheets) units.discovered.push(`hidden-sheet:${hidden}`);
+  const namedRanges = [...workbookXml.matchAll(/<definedName[^>]*name="([^"]+)"/g)].map((match) => match[1]);
+  for (const range of namedRanges) units.discovered.push(`named-range:${range}`);
+  for (const table of entriesByPrefix(entries, "xl/tables/")) units.discovered.push(`table:${table}`);
+  const charts = entriesByPrefix(entries, "xl/charts/");
+  for (const chart of charts) units.discovered.push(`chart:${chart}`);
+  if (charts.length) units.unsupported.push(`charts identified but not rendered: ${charts.length}`);
   const sheets = entriesByPrefix(entries, "xl/worksheets/sheet");
   units.discovered.push(`sheets:${sheets.length}`);
   const fragments = [];
   const usedSheets = sheets.slice(0, profile.maxWorksheets);
   if (sheets.length > usedSheets.length) units.omitted.push(`sheets ${usedSheets.length + 1}-${sheets.length}`);
   for (const sheetName of usedSheets) {
+    deadline(startedAt, profile);
     const xml = Buffer.from(entries[sheetName]).toString("utf8");
+    const usedRange = xml.match(/<dimension ref="([^"]+)"/)?.[1];
+    if (usedRange) units.discovered.push(`${sheetName}:used-range:${usedRange}`);
+    const hiddenRows = (xml.match(/<row [^>]*hidden="(?:1|true)"/g) ?? []).length;
+    if (hiddenRows) units.discovered.push(`${sheetName}:hidden-rows:${hiddenRows}`);
     let rows = 0;
     let cell = null;
     let value = "";
@@ -278,7 +322,10 @@ function extractXlsx(source, entries, profile, units) {
     });
     parser.write(xml).close();
     units.processed.push(`${sheetName}:rows:${Math.min(rows, profile.maxRowsPerSheet)}`);
-    if (rows > profile.maxRowsPerSheet) units.omitted.push(`${sheetName} rows ${profile.maxRowsPerSheet + 1}-${rows}`);
+    if (rows > profile.maxRowsPerSheet) {
+      units.omitted.push(`${sheetName} rows ${profile.maxRowsPerSheet + 1}-${rows}`);
+      units.partially_processed.push(sheetName);
+    }
     if (formulas > 0) units.warnings.push(`${sheetName}: ${formulas} formulas identified, never evaluated (§16.2)`);
   }
   return fragments;
@@ -333,7 +380,8 @@ function extractDrawio(source, text, profile, units) {
   if (pages > 0 && shapes === 0 && /<diagram[^>]*>[A-Za-z0-9+/=\s]+<\/diagram>/.test(text)) {
     const encoded = text.match(/<diagram[^>]*>([A-Za-z0-9+/=\s]+)<\/diagram>/)?.[1]?.replace(/\s+/g, "");
     try {
-      const inflated = Buffer.from(inflateSync(new Uint8Array(Buffer.from(encoded, "base64")), { raw: true })).toString("utf8");
+      const out = new Uint8Array(16 * 1024 * 1024);
+      const inflated = Buffer.from(inflateSync(new Uint8Array(Buffer.from(encoded, "base64")), { out })).toString("utf8").replace(/\0+$/u, "");
       const decoded = decodeURIComponent(inflated);
       return extractDrawio(source, `<mxfile><diagram name="page-1">${decoded}</diagram></mxfile>`, profile, units);
     } catch {
@@ -342,6 +390,7 @@ function extractDrawio(source, text, profile, units) {
   }
   units.discovered.push(`pages:${pages}`, `shapes:${shapes}`);
   units.processed.push(`pages:${Math.min(pages, profile.maxDiagramPages)}`);
+  units.unsupported.push("diagram layers not distinguished in this adapter version");
   return fragments;
 }
 
@@ -379,7 +428,7 @@ function extractVsdx(source, entries, profile, units) {
   return fragments;
 }
 
-async function extractPdf(source, bytes, profile, units) {
+async function extractPdf(source, bytes, profile, units, startedAt = Date.now()) {
   const head = Buffer.from(bytes.subarray(0, Math.min(bytes.length, 2048))).toString("latin1");
   if (head.includes("/Encrypt")) {
     throw new IntakeError("encrypted PDF fails closed (§16.2)", "encrypted");
@@ -399,6 +448,7 @@ async function extractPdf(source, bytes, profile, units) {
   if (pdf.numPages > used) units.omitted.push(`pages ${used + 1}-${pdf.numPages}`);
   const fragments = [];
   for (let pageNumber = 1; pageNumber <= used; pageNumber += 1) {
+    deadline(startedAt, profile);
     const page = await pdf.getPage(pageNumber);
     const content = await page.getTextContent();
     const text = content.items.map((item) => item.str).join(" ").trim();
@@ -507,6 +557,17 @@ function extractEml(source, text, profile, units) {
 
 const OOXML_FORMATS = Object.freeze(["docx", "xlsx", "pptx", "vsdx"]);
 
+const MEDIA_TYPES = Object.freeze({
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  vsdx: "application/vnd.ms-visio.drawing",
+  markdown: "text/markdown", text: "text/plain", html: "text/html", csv: "text/csv",
+  drawio: "application/x-drawio", svg: "image/svg+xml",
+  png: "image/png", jpeg: "image/jpeg", gif: "image/gif", eml: "message/rfc822"
+});
+
 /**
  * Run the bounded intake pipeline over one file. Returns fragments plus the
  * §16.2.2 coverage record. Fails closed on encrypted, macro-enabled, and
@@ -518,12 +579,12 @@ export async function intake({ bytes, name, declaredMediaType, profile: override
   if (bytes.length > profile.maxBytes) {
     throw new IntakeError(`file exceeds the bounded-scan byte limit (${bytes.length} > ${profile.maxBytes})`, "bounded-limit");
   }
-  const started = Date.now();
+  const startedAt = Date.now();
   const detection = detect({ bytes, name, declaredMediaType });
   const source = {
     id: name ?? "unnamed",
     hash: sha256(bytes),
-    mediaType: declaredMediaType ?? null,
+    mediaType: declaredMediaType ?? MEDIA_TYPES[detection.format] ?? null,
     format: detection.format,
     size: bytes.length
   };
@@ -539,12 +600,12 @@ export async function intake({ bytes, name, declaredMediaType, profile: override
   let fragments;
   const text = () => Buffer.from(bytes).toString("utf8");
   if (OOXML_FORMATS.includes(detection.format)) {
-    const entries = unzipSafely(bytes);
+    const entries = unzipSafely(bytes, profile);
     if (detection.format === "docx") fragments = extractDocx(source, entries, profile, units);
-    else if (detection.format === "xlsx") fragments = extractXlsx(source, entries, profile, units);
+    else if (detection.format === "xlsx") fragments = extractXlsx(source, entries, profile, units, startedAt);
     else if (detection.format === "pptx") fragments = extractPptx(source, entries, profile, units);
     else fragments = extractVsdx(source, entries, profile, units);
-  } else if (detection.format === "pdf") fragments = await extractPdf(source, bytes, profile, units);
+  } else if (detection.format === "pdf") fragments = await extractPdf(source, bytes, profile, units, startedAt);
   else if (detection.format === "csv") fragments = extractCsv(source, bytes, profile, units);
   else if (detection.format === "html") fragments = extractHtml(source, text(), profile, units);
   else if (detection.format === "drawio") fragments = extractDrawio(source, text(), profile, units);
@@ -554,10 +615,7 @@ export async function intake({ bytes, name, declaredMediaType, profile: override
   else if (detection.format === "eml") fragments = extractEml(source, text(), profile, units);
   else fragments = extractText(source, text(), profile, units);
 
-  const elapsed = Date.now() - started;
-  if (elapsed > profile.maxMillis) {
-    units.warnings.push(`extraction exceeded the bounded time budget (${elapsed}ms)`);
-  }
+  deadline(startedAt, profile);
 
   const complete = units.omitted.length === 0 && units.unsupported.length === 0;
   return {
@@ -575,4 +633,83 @@ export async function intake({ bytes, name, declaredMediaType, profile: override
         : "partial extraction; omitted and unsupported units listed"
     }
   };
+}
+
+/* -------------------------------------------------- staged contract (§16.2.2) */
+
+/**
+ * probe: read only enough to determine signature, media type, encryption or
+ * macro flags, size, and available structural counts (§16.2.2).
+ */
+export function probe({ bytes, name, declaredMediaType }) {
+  const detection = detect({ bytes, name, declaredMediaType });
+  const result = {
+    format: detection.format,
+    media_type: declaredMediaType ?? MEDIA_TYPES[detection.format] ?? null,
+    size: bytes.length,
+    encrypted: detection.format === "encrypted-ooxml"
+      || (detection.format === "pdf" && Buffer.from(bytes.subarray(0, 2048)).toString("latin1").includes("/Encrypt")),
+    macro_flags: false,
+    structural_counts: {},
+    warnings: detection.warnings
+  };
+  if (OOXML_FORMATS.includes(detection.format)) {
+    try {
+      const entries = unzipSafely(bytes);
+      result.macro_flags = Object.keys(entries).some((entryName) => entryName.toLowerCase().includes("vbaproject"));
+      result.structural_counts.entries = Object.keys(entries).length;
+    } catch {
+      result.warnings.push("container structure could not be probed");
+    }
+  }
+  return result;
+}
+
+/** list-structure: addressable units without full semantic analysis (§16.2.2). */
+export async function listStructure(input, options) {
+  const { fragments, coverage } = await intake(input, options);
+  return {
+    units: fragments.map(({ structural_path, locator, kind }) => ({ structural_path, locator, kind })),
+    coverage: coverage.units
+  };
+}
+
+/** extract-selection: explicit unit selectors and budgets (§16.2.2). */
+export async function extractSelection(input, { selectors = [], profile } = {}, options) {
+  const result = await intake({ ...input, profile }, options);
+  if (selectors.length === 0) return result;
+  const selected = result.fragments.filter((entry) =>
+    selectors.some((selector) => entry.structural_path === selector || entry.structural_path.startsWith(`${selector}/`) || entry.structural_path.startsWith(`${selector}:`))
+  );
+  return {
+    ...result,
+    fragments: selected,
+    coverage: {
+      ...result.coverage,
+      complete: false,
+      description: `selection of ${selected.length}/${result.fragments.length} discovered fragments; unselected units omitted by request`
+    }
+  };
+}
+
+/** render-selection: visual rendering is not supported in this adapter version — fails closed. */
+export function renderSelection() {
+  throw new IntakeError("render-selection is not supported by rdlc-intake/0.1.0; record the unit as unrendered", "unsupported");
+}
+
+/** list-embedded: embedded and attached object identities (§16.2.2). */
+export async function listEmbedded(input, options) {
+  const { bytes, name } = input;
+  const detection = detect({ bytes, name });
+  if (OOXML_FORMATS.includes(detection.format)) {
+    const entries = unzipSafely(bytes);
+    return Object.keys(entries)
+      .filter((entryName) => /media\/|embeddings\//.test(entryName))
+      .map((entryName) => ({ kind: "embedded-object", name: entryName }));
+  }
+  if (detection.format === "eml") {
+    const { fragments } = await intake(input, options);
+    return fragments.filter((entry) => entry.kind === "attachment-identity").map((entry) => ({ kind: "attachment", name: entry.metadata.filename }));
+  }
+  return [];
 }

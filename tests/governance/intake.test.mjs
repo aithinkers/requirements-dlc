@@ -136,3 +136,74 @@ test("FEAT-007: PDF extraction is page-anchored and bounded", async () => {
   assert.match(page.text, /Preserve incomplete checkouts/);
   assert.ok(result.coverage.units.processed.includes("pages:1"));
 });
+
+test("FEAT-007: zip bombs fail closed on inflated size, not just container size (review HIGH)", async () => {
+  const { zipSync } = await import("fflate");
+  const bomb = zipSync({
+    "word/document.xml": new Uint8Array(8 * 1024 * 1024) // zero-filled, highly compressible
+  });
+  await assert.rejects(
+    intake({ bytes: bomb, name: "bomb.docx", profile: { maxInflatedBytes: 1024 * 1024 } }),
+    (error) => error instanceof IntakeError && error.category === "bounded-limit"
+  );
+});
+
+test("FEAT-007: the time budget is enforced, not advisory (review MEDIUM)", async () => {
+  const bytes = await readFile("fixtures/intake/estimates.xlsx");
+  await assert.rejects(
+    intake({ bytes, name: "estimates.xlsx", profile: { maxMillis: -1 } }),
+    (error) => error instanceof IntakeError && error.category === "bounded-limit"
+  );
+});
+
+test("FEAT-007: XLSX identifies hidden content, named ranges, tables, charts, used ranges (review MEDIUM)", async () => {
+  const { zipSync } = await import("fflate");
+  const enc = (t) => new TextEncoder().encode(t);
+  const bytes = zipSync({
+    "[Content_Types].xml": enc('<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>'),
+    "xl/workbook.xml": enc('<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets><sheet name="Visible" sheetId="1"/><sheet name="Secret" sheetId="2" state="hidden"/></sheets><definedNames><definedName name="Budget">Visible!$A$1</definedName></definedNames></workbook>'),
+    "xl/tables/table1.xml": enc('<table/>'),
+    "xl/charts/chart1.xml": enc('<chart/>'),
+    "xl/worksheets/sheet1.xml": enc('<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:B2"/><sheetData><row r="1" hidden="1"><c r="A1"><v>1</v></c></row></sheetData></worksheet>'),
+    "xl/worksheets/sheet2.xml": enc('<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData/></worksheet>')
+  });
+  const result = await intake({ bytes, name: "audit.xlsx" });
+  const discovered = result.coverage.units.discovered.join(" ");
+  assert.match(discovered, /hidden-sheet:Secret/);
+  assert.match(discovered, /named-range:Budget/);
+  assert.match(discovered, /table:xl\/tables\/table1\.xml/);
+  assert.match(discovered, /chart:xl\/charts\/chart1\.xml/);
+  assert.match(discovered, /used-range:A1:B2/);
+  assert.match(discovered, /hidden-rows:1/);
+  assert.ok(result.coverage.units.unsupported.some((entry) => /charts identified but not rendered/.test(entry)));
+});
+
+test("FEAT-007: the staged contract is individually addressable (review MEDIUM)", async () => {
+  const { probe, listStructure, extractSelection, renderSelection, listEmbedded } = await import("../../core/lib/intake/index.mjs");
+  const bytes = await readFile("fixtures/intake/estimates.xlsx");
+  const probed = probe({ bytes, name: "estimates.xlsx" });
+  assert.equal(probed.format, "xlsx");
+  assert.equal(probed.encrypted, false);
+  assert.equal(probed.macro_flags, false);
+  assert.ok(probed.structural_counts.entries > 0);
+  const macro = probe({ bytes: await readFile("fixtures/intake/macro.xlsm"), name: "macro.xlsm" });
+  assert.equal(macro.macro_flags, true);
+
+  const structure = await listStructure({ bytes, name: "estimates.xlsx" });
+  assert.ok(structure.units.every((unit) => unit.structural_path && unit.kind));
+
+  const md = await readFile("fixtures/intake/scope.md");
+  const selection = await extractSelection({ bytes: md, name: "scope.md" }, { selectors: ["section:Outcomes"] });
+  assert.equal(selection.fragments.length, 1);
+  assert.match(selection.coverage.description, /unselected units omitted by request/);
+
+  assert.throws(() => renderSelection(), (error) => error.category === "unsupported");
+
+  const embedded = await listEmbedded({ bytes: await readFile("fixtures/intake/thread.eml"), name: "thread.eml" });
+  assert.deepEqual(embedded, [{ kind: "attachment", name: "scope.pdf" }]);
+});
+
+test("FEAT-007: media type is preserved from format when not declared (review LOW)", async () => {
+  const result = await intake({ bytes: await readFile("fixtures/intake/scope.pdf"), name: "scope.pdf" });
+  assert.equal(result.source.mediaType, "application/pdf");
+});
