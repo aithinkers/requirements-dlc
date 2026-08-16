@@ -29,7 +29,8 @@
     "test:governance": "node --test tests/governance/*.test.mjs",
     "test": "npm run check:governance && npm run test:governance",
     "generate:distribution": "node scripts/generate-distribution.mjs",
-    "check:distribution": "node scripts/generate-distribution.mjs --check"
+    "check:distribution": "node scripts/generate-distribution.mjs --check",
+    "benchmark:scale": "node scripts/run-scale-benchmark.mjs"
   },
   "dependencies": {
     "canonicalize": "4.0.0",
