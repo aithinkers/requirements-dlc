@@ -1,0 +1,28 @@
+{
+  "schema_version": "rdlc.conformance-statement/v0.2",
+  "specification": "rdlc",
+  "specification_version": "0.2.0",
+  "implementation": "requirements-dlc reference distribution",
+  "implementation_version": "0.0.1",
+  "release_candidate": false,
+  "modules": ["Core", "Governed-Basic"],
+  "partial_modules": {
+    "Planning": "dependency graph, cycle detection, coverage, and collision review are implemented; planning-hierarchy templates, estimation profiles (§22), RAID+D records (§23), and delivery waves are outstanding",
+    "Core": "capture, promotion, trace, lifecycle, identity, hashing, intake, state, and resume are implemented; elicitation prompt packs (§18), component registry lifecycle (§19), and comment review (§26) are outstanding"
+  },
+  "connectors": ["Connected:Jira-Cloud-Company-Managed"],
+  "connector_notes": "release-0.1 subset per core/connectors/jira CAPABILITIES; declared deferrals include attachments, native approvals, estimation fields, history retention, webhooks, and ADF read-back normalization",
+  "harnesses": ["Harness:Claude-Code"],
+  "exceptions": [
+    "Planning module is partial (see partial_modules)",
+    "semantic review, duplicate ranking, and test generation (Verification module) are not claimed",
+    "§44.3 standing self-review fixture pending import of the frozen 0.1 specification (ADR-001 item 14)",
+    "the §46 definition of done requires a tagged build with a published test report; this statement precedes that tag"
+  ],
+  "test_report": "npm test from a clean checkout; scale benchmark via node scripts/run-scale-benchmark.mjs",
+  "scale_benchmark": {
+    "fixture": "5,000 artifacts / 50,000 relationships (scripts/scale-fixture.mjs, deterministic seed)",
+    "targets": { "full_validation_ms": 30000, "incremental_p95_ms": 2000 },
+    "reference_environment": "GitHub-hosted ubuntu-latest runner class (ADR-001 item 11); per-run environment recorded in the benchmark report"
+  }
+}

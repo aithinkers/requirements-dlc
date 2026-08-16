@@ -273,10 +273,16 @@
         "§46",
         "§7.10"
       ],
-      "status": "planned",
+      "status": "in-progress",
       "evidence": {
-        "implementation": [],
-        "tests": []
+        "implementation": [
+          "scripts/scale-fixture.mjs",
+          "scripts/run-scale-benchmark.mjs",
+          "distribution/release/conformance-statement.json"
+        ],
+        "tests": [
+          "tests/governance/release-scenario.test.mjs"
+        ]
       }
     }
   ]
