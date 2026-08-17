@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -83,6 +83,41 @@ test("FEAT-023: mount paths are confined to the project root (§7.2)", async () 
   ].join("\n"));
   await assert.rejects(loadKnowledgeProject(root), (error) => error.code === "RDLC_KB_PATH");
   await rm(root, { recursive: true, force: true });
+});
+
+test("FEAT-023: a hostile catalog cannot escape its mount or break determinism (review HIGH/MEDIUM)", async () => {
+  const escapee = { id: "evil", path: "../../../../etc/passwd", byte_hash: "sha256:" + "f".repeat(64), access: { classification: "internal" } };
+  const root = await groundedProject({ concepts: [escapee] });
+  const project = await loadKnowledgeProject(root);
+  // The catalog is untrusted external content: a path pointing outside the
+  // mount fails closed instead of resolving to an arbitrary file.
+  await assert.rejects(resolveKbReference(project, "kb://product/evil"), (error) => error.code === "RDLC_KB_PATH");
+
+  // Duplicate concept ids would make lock digests order-dependent and
+  // self-diffs report phantom drift — the catalog is rejected outright.
+  await writeFile(join(root, "knowledge/product/retrieval-catalog.json"), JSON.stringify({
+    version: CATALOG,
+    concepts: [CONCEPT, { ...CONCEPT, byte_hash: "sha256:" + "9".repeat(64) }]
+  }));
+  await assert.rejects(resolveKbReference(project, `kb://product/${CONCEPT.id}`), (error) => error.code === "RDLC_KB_CATALOG");
+  await assert.rejects(createKnowledgeLock(project, { lockedAt: "2026-08-16T12:00:00Z" }), (error) => error.code === "RDLC_KB_CATALOG");
+  await rm(root, { recursive: true, force: true });
+});
+
+test("FEAT-023: a symlinked mount cannot smuggle in a directory outside the project (review LOW)", async () => {
+  const outside = await mkdtemp(join(tmpdir(), "rdlc-kb-outside-"));
+  const root = await mkdtemp(join(tmpdir(), "rdlc-kb-link-"));
+  await writeFile(join(root, "knowledge-project.yaml"), [
+    "kind: Project",
+    "knowledge_bases:",
+    "  - name: linked",
+    "    uri: ./mounted",
+    ""
+  ].join("\n"));
+  await symlink(outside, join(root, "mounted"));
+  await assert.rejects(loadKnowledgeProject(root), (error) => error.code === "RDLC_KB_PATH");
+  await rm(root, { recursive: true, force: true });
+  await rm(outside, { recursive: true, force: true });
 });
 
 test("FEAT-023: the knowledge lock is deterministic, digest-bound, and tamper-evident (§17.1, §17.4)", async () => {

@@ -11,7 +11,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { canonicalBytes, normalizeTimestamp, parseStrict } from "./canonical.mjs";
@@ -83,14 +83,30 @@ export async function loadKnowledgeProject(projectRoot, manifestPath = "knowledg
     if (typeof mount?.name !== "string" || mount.name.length === 0) {
       throw new KnowledgeError("every knowledge base mount requires a name", "RDLC_KB_MANIFEST");
     }
-    return Object.freeze({
+    return {
       name: mount.name,
       uri: mount.uri,
       mode: mount.mode ?? "consume",
       role: mount.role ?? "dependency",
       directory: confinedPath(projectRoot, mount.uri, `mount ${mount.name}`)
-    });
+    };
   });
+  // A symlinked mount must not smuggle in a directory outside the project:
+  // confine the real path too, not just the lexical one (§7.2).
+  const realRoot = await realpath(resolve(projectRoot));
+  for (const mount of mounts) {
+    let real;
+    try {
+      real = await realpath(mount.directory);
+    } catch {
+      continue; // absent mounts fail later, at catalog read, with RDLC_KB_CATALOG
+    }
+    const relativePart = relative(realRoot, real);
+    if (relativePart.startsWith("..") || isAbsolute(relativePart)) {
+      throw new KnowledgeError(`mount ${mount.name} resolves outside the project root`, "RDLC_KB_PATH");
+    }
+  }
+  for (const mount of mounts) Object.freeze(mount);
   const names = new Set(mounts.map(({ name }) => name));
   if (names.size !== mounts.length) throw new KnowledgeError("mount names must be unique", "RDLC_KB_MANIFEST");
   return deepFreeze({ manifest_path: manifestPath, mounts });
@@ -107,10 +123,15 @@ export async function readCatalog(mount) {
   if (parsed?.version !== CATALOG_VERSION || !Array.isArray(parsed.concepts)) {
     throw new KnowledgeError(`mount ${mount.name} catalog is not ${CATALOG_VERSION}`, "RDLC_KB_CATALOG");
   }
+  const seen = new Set();
   for (const concept of parsed.concepts) {
     if (typeof concept?.id !== "string" || typeof concept?.byte_hash !== "string") {
       throw new KnowledgeError(`mount ${mount.name} catalog entry is missing id or byte_hash`, "RDLC_KB_CATALOG");
     }
+    if (seen.has(concept.id)) {
+      throw new KnowledgeError(`mount ${mount.name} catalog declares ${concept.id} twice`, "RDLC_KB_CATALOG");
+    }
+    seen.add(concept.id);
   }
   return parsed;
 }
@@ -135,7 +156,9 @@ export async function resolveKbReference(project, reference, { allowedClassifica
     reference,
     knowledge_base: kbName,
     concept_id: conceptId,
-    path: join(mount.directory, concept.path ?? `${conceptId}.md`),
+    // The catalog is external, untrusted content: its declared path must
+    // stay inside the mount (§7.2 fail closed).
+    path: confinedPath(mount.directory, concept.path ?? `${conceptId}.md`, `catalog path for ${reference}`),
     byte_hash: concept.byte_hash,
     access: { classification }
   });
