@@ -44,6 +44,7 @@
     "ajv": "8.20.0"
   },
   "bin": {
+    "requirements-dlc": "./scripts/setup.mjs",
     "rdlc-setup": "./scripts/setup.mjs",
     "rdlc-sensors": "./scripts/run-sensors.mjs"
   },

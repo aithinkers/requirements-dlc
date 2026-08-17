@@ -14,6 +14,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { realpathSync } from "node:fs";
 import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -348,7 +349,10 @@ export async function runSetup({ target, tool = "claude-code", force = false, ch
   return results;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// realpathSync both sides: npm/npx install bins as SYMLINKS, and a lexical
+// compare made the npx entry point silently no-op (#62).
+const invokedAs = process.argv[1] ? (() => { try { return realpathSync(resolve(process.argv[1])); } catch { return resolve(process.argv[1]); } })() : null;
+if (invokedAs && invokedAs === realpathSync(fileURLToPath(import.meta.url))) {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
     console.log(`Usage: rdlc-setup [--target <dir>] [--tool claude-code|codex|kiro|kiro-ide] [--force] [--check]

@@ -671,6 +671,24 @@
         ],
         "tests": []
       }
+    },
+    {
+      "id": "FEAT-027",
+      "title": "npx entry point resolves: name-matching bin and symlink-aware main guard",
+      "issue": 62,
+      "specification_sections": [
+        "47"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "package.json",
+          "scripts/setup.mjs"
+        ],
+        "tests": [
+          "tests/governance/governance.test.mjs"
+        ]
+      }
     }
   ]
 }
