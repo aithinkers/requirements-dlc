@@ -11,7 +11,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFile, realpath } from "node:fs/promises";
+import { readFile, readdir, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { canonicalBytes, normalizeTimestamp, parseStrict } from "./canonical.mjs";
@@ -67,6 +67,53 @@ export function isKbReference(reference) {
  * The manifest is K-DLC's own `knowledge-project.yaml`; only what the
  * consumer contract needs is read, and unknown structure is left alone.
  */
+/**
+ * Locate an out-of-root mount's K-DLC verified materialization (§17 items 1-2).
+ * Raw external paths are never read: the mount must be pinned in K-DLC's own
+ * `knowledge.lock` and present in the `.kdlc/mounts` cache with a
+ * `knowledge-base.yaml` whose bytes match the lock's manifest_hash. Anything
+ * less fails closed — the live external folder is not a fallback.
+ */
+async function materializedMount(projectRoot, name) {
+  let lock;
+  try {
+    lock = JSON.parse(await readFile(resolve(projectRoot, "knowledge.lock"), "utf8"));
+  } catch {
+    throw new KnowledgeError(`external mount ${name} needs K-DLC's knowledge.lock; run a kdlc retrieval (or refresh) to materialize it`, "RDLC_KB_UNMATERIALIZED");
+  }
+  const pinned = lock?.knowledge_bases?.[name];
+  if (typeof pinned?.manifest_hash !== "string" || typeof pinned?.resolved_ref !== "string") {
+    throw new KnowledgeError(`external mount ${name} is not pinned in knowledge.lock`, "RDLC_KB_UNMATERIALIZED");
+  }
+  const cacheRoot = resolve(projectRoot, ".kdlc/mounts");
+  let entries;
+  try {
+    entries = (await readdir(cacheRoot, { withFileTypes: true })).filter((entry) => entry.isDirectory() && !entry.name.startsWith("."));
+  } catch {
+    throw new KnowledgeError(`external mount ${name} has no materialized cache under .kdlc/mounts`, "RDLC_KB_UNMATERIALIZED");
+  }
+  for (const entry of entries) {
+    const directory = join(cacheRoot, entry.name);
+    let bytes;
+    try {
+      bytes = await readFile(join(directory, "knowledge-base.yaml"));
+    } catch {
+      continue;
+    }
+    const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    if (digest === pinned.manifest_hash) return { directory, resolved_ref: pinned.resolved_ref };
+  }
+  throw new KnowledgeError(`external mount ${name} matches no verified materialization (manifest hash ${pinned.manifest_hash})`, "RDLC_KB_UNMATERIALIZED");
+}
+
+function isExternalUri(projectRoot, uri) {
+  if (typeof uri !== "string" || uri.length === 0) return false;
+  if (uri.startsWith("git+")) return true;
+  if (isAbsolute(uri)) return true;
+  const relativePart = relative(resolve(projectRoot), resolve(projectRoot, uri));
+  return relativePart.startsWith("..") || isAbsolute(relativePart);
+}
+
 export async function loadKnowledgeProject(projectRoot, manifestPath = "knowledge-project.yaml") {
   const absolute = confinedPath(projectRoot, manifestPath, "knowledge manifest");
   let text;
@@ -79,18 +126,31 @@ export async function loadKnowledgeProject(projectRoot, manifestPath = "knowledg
   if (manifest?.kind !== "Project" || !Array.isArray(manifest.knowledge_bases) || manifest.knowledge_bases.length === 0) {
     throw new KnowledgeError("knowledge manifest must be a K-DLC Project with knowledge_bases", "RDLC_KB_MANIFEST");
   }
-  const mounts = manifest.knowledge_bases.map((mount) => {
+  const mounts = [];
+  for (const mount of manifest.knowledge_bases) {
     if (typeof mount?.name !== "string" || mount.name.length === 0) {
       throw new KnowledgeError("every knowledge base mount requires a name", "RDLC_KB_MANIFEST");
     }
-    return {
+    if (isExternalUri(projectRoot, mount.uri)) {
+      const materialized = await materializedMount(projectRoot, mount.name);
+      mounts.push({
+        name: mount.name,
+        uri: mount.uri,
+        mode: mount.mode ?? "consume",
+        role: mount.role ?? "dependency",
+        directory: materialized.directory,
+        resolved_ref: materialized.resolved_ref
+      });
+      continue;
+    }
+    mounts.push({
       name: mount.name,
       uri: mount.uri,
       mode: mount.mode ?? "consume",
       role: mount.role ?? "dependency",
       directory: confinedPath(projectRoot, mount.uri, `mount ${mount.name}`)
-    };
-  });
+    });
+  }
   // A symlinked mount must not smuggle in a directory outside the project:
   // confine the real path too, not just the lexical one (§7.2).
   const realRoot = await realpath(resolve(projectRoot));
@@ -182,6 +242,7 @@ export async function createKnowledgeLock(project, { lockedAt }) {
     mounts.push({
       name: mount.name,
       mode: mount.mode,
+      ...(mount.resolved_ref ? { resolved_ref: mount.resolved_ref } : {}),
       concepts: [...catalog.concepts]
         .sort((a, b) => (a.id < b.id ? -1 : 1))
         .map((concept) => ({
