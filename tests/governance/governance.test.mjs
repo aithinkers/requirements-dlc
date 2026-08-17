@@ -87,3 +87,11 @@ test("FEAT-001: issue body validation requires the three governed sections", () 
   assert.deepEqual(failures, []);
   assert.ok(validateIssueBody({ number: 1, body: "" }, 1).length >= 3);
 });
+
+test("FEAT-027: npx can determine the executable — a bin matches the package name (#62)", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const pkg = JSON.parse(await readFile("package.json", "utf8"));
+  // With multiple bins, npx github:<repo> only works when one bin matches
+  // the package name; this locks the documented zero-install path.
+  assert.equal(pkg.bin[pkg.name], "./scripts/setup.mjs");
+});
