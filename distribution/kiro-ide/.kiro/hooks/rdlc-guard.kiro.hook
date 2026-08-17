@@ -1,0 +1,1 @@
+{"version":"1.0.0","enabled":true,"name":"rdlc-guard","description":"Blocks direct edits to approvals, baselines, and the installed reference playbook.","when":{"type":"preToolUse"},"then":{"type":"runCommand","command":"node .kiro/hooks/rdlc-guard.mjs"}}

@@ -1,6 +1,19 @@
 {
+  "$schema": "https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
   "name": "rdlc-compliance-reviewer",
   "description": "Check policy, privacy, retention, and rights impact.",
-  "prompt": "rdlc-compliance-reviewer.md",
-  "host": "Kiro CLI"
+  "prompt": "file://rdlc-compliance-reviewer.md",
+  "tools": [
+    "fs_read",
+    "thinking"
+  ],
+  "allowedTools": [
+    "fs_read",
+    "thinking"
+  ],
+  "resources": [
+    "file://.kiro/agents/rdlc-compliance-reviewer.md",
+    "file://rdlc/reference/stage-protocol.md",
+    "file://rdlc/reference/scopes/*.md"
+  ]
 }

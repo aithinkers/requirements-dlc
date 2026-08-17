@@ -1,0 +1,1 @@
+{"version":"1.0.0","enabled":true,"name":"rdlc-orient","description":"Orients the assistant in an R-DLC engagement (at most once per few hours).","when":{"type":"promptSubmit"},"then":{"type":"runCommand","command":"node .kiro/hooks/rdlc-orient.mjs"}}
