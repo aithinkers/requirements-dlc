@@ -575,6 +575,26 @@
           "tests/governance/scope-doc.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-022",
+      "title": "Claude Code plugin manifest uses the auto-discovery form so install succeeds",
+      "issue": 52,
+      "specification_sections": [
+        "36",
+        "47"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "scripts/generate-distribution.mjs",
+          "distribution/claude-code/.claude-plugin/plugin.json",
+          ".claude-plugin/marketplace.json"
+        ],
+        "tests": [
+          "tests/governance/engagement.test.mjs"
+        ]
+      }
     }
   ]
 }

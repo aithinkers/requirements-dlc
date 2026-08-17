@@ -1,1 +1,1 @@
-{"agents":"./agents","commands":"./commands","description":"Governed R-DLC Claude Code adapter","name":"rdlc","version":"0.2.0"}
+{"description":"Governed R-DLC Claude Code adapter","name":"rdlc","version":"0.2.1"}

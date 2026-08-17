@@ -146,7 +146,7 @@ const expected = new Map(core.commands.map((command) => [join("claude-code", "co
 for (const role of roleCore.roles) expected.set(join("claude-code", "agents", `rdlc-${role.id}.md`), renderAgent(role));
 expected.set(
   join("claude-code", ".claude-plugin", "plugin.json"),
-  JSON.stringify({ agents: "./agents", commands: "./commands", description: "Governed R-DLC Claude Code adapter", name: "rdlc", version: "0.2.0" }) + "\n"
+  JSON.stringify({ description: "Governed R-DLC Claude Code adapter", name: "rdlc", version: "0.2.1" }) + "\n"
 );
 
 // Shared reference tree (stage protocol, stage graph, scope profiles) — the
