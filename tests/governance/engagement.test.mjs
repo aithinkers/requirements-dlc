@@ -169,8 +169,11 @@ test("FEAT-012: all ten §38 role lenses generate as agents with the untrusted-c
 test("FEAT-012: the plugin manifest points at generated agents and commands and is drift-protected", async () => {
   const manifest = JSON.parse(await readFile("distribution/claude-code/.claude-plugin/plugin.json", "utf8"));
   assert.equal(manifest.name, "rdlc");
-  assert.equal(manifest.agents, "./agents");
-  assert.equal(manifest.commands, "./commands");
+  // Auto-discovery form: Claude Code rejects explicit agents/commands path
+  // keys and discovers the directories beside the manifest (#52).
+  assert.equal("agents" in manifest, false);
+  assert.equal("commands" in manifest, false);
+  assert.equal(manifest.version, "0.2.1");
   const target = "distribution/claude-code/agents/rdlc-facilitator.md";
   const original = await readFile(target, "utf8");
   try {
