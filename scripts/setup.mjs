@@ -355,7 +355,7 @@ const invokedAs = process.argv[1] ? (() => { try { return realpathSync(resolve(p
 if (invokedAs && invokedAs === realpathSync(fileURLToPath(import.meta.url))) {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    console.log(`Usage: rdlc-setup [--target <dir>] [--tool claude-code|codex|kiro|kiro-ide] [--force] [--check]
+    console.log(`Usage: npx github:aithinkers/requirements-dlc (or rdlc-setup) [--target <dir>] [--tool claude-code|codex|kiro|kiro-ide] [--force] [--check]
 
 Exit codes: 0 success/up-to-date; 1 drift found (--check) or setup error;
 2 completed but user-modified files were protected (rerun with --force).`);
