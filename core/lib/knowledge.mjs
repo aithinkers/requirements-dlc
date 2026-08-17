@@ -92,7 +92,12 @@ async function materializedMount(projectRoot, name) {
   } catch {
     throw new KnowledgeError(`external mount ${name} has no materialized cache under .kdlc/mounts`, "RDLC_KB_UNMATERIALIZED");
   }
-  for (const entry of entries) {
+  // The catalog beside a hash-matched manifest is trusted: an in-project
+  // writer who could forge it could equally rewrite knowledge.lock itself,
+  // so the boundary is the working tree — rdlc's own lock re-pins every
+  // concept byte_hash at lock time. Sorted so same-manifest duplicates
+  // resolve deterministically across filesystems.
+  for (const entry of [...entries].sort((a, b) => (a.name < b.name ? -1 : 1))) {
     const directory = join(cacheRoot, entry.name);
     let bytes;
     try {
