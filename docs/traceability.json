@@ -656,6 +656,21 @@
           "tests/governance/engagement.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-026",
+      "title": "README parity with knowledge-dlc structure and shipped capabilities",
+      "issue": 60,
+      "specification_sections": [
+        "36"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "README.md"
+        ],
+        "tests": []
+      }
     }
   ]
 }
