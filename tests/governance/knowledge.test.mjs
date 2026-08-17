@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -72,7 +73,7 @@ test("FEAT-023: kb:// references parse strictly and resolve against mounted cata
   await rm(root, { recursive: true, force: true });
 });
 
-test("FEAT-023: mount paths are confined to the project root (§7.2)", async () => {
+test("FEAT-023/024: out-of-root mount paths never resolve directly (§7.2)", async () => {
   const root = await mkdtemp(join(tmpdir(), "rdlc-kb-escape-"));
   await writeFile(join(root, "knowledge-project.yaml"), [
     "kind: Project",
@@ -81,7 +82,9 @@ test("FEAT-023: mount paths are confined to the project root (§7.2)", async () 
     "    uri: ../../outside",
     ""
   ].join("\n"));
-  await assert.rejects(loadKnowledgeProject(root), (error) => error.code === "RDLC_KB_PATH");
+  // Out-of-root paths are external mounts: without a K-DLC verified
+  // materialization they fail closed — the raw folder is never read.
+  await assert.rejects(loadKnowledgeProject(root), (error) => error.code === "RDLC_KB_UNMATERIALIZED");
   await rm(root, { recursive: true, force: true });
 });
 
@@ -118,6 +121,58 @@ test("FEAT-023: a symlinked mount cannot smuggle in a directory outside the proj
   await assert.rejects(loadKnowledgeProject(root), (error) => error.code === "RDLC_KB_PATH");
   await rm(root, { recursive: true, force: true });
   await rm(outside, { recursive: true, force: true });
+});
+
+test("FEAT-024: external mounts resolve only through K-DLC's verified materialization, fail-closed otherwise", async () => {
+  const root = await mkdtemp(join(tmpdir(), "rdlc-kb-ext-"));
+  const manifestYaml = [
+    "api_version: kdlc.dev/v1alpha1",
+    "kind: KnowledgeBase",
+    "metadata: { id: acme.payments, name: payments, version: 1.0.0 }",
+    ""
+  ].join("\n");
+  const manifestHash = "sha256:" + createHash("sha256").update(manifestYaml).digest("hex");
+  await writeFile(join(root, "knowledge-project.yaml"), [
+    "kind: Project",
+    "knowledge_bases:",
+    "  - name: payments",
+    "    uri: ../payments-kb",
+    "    mode: consume",
+    ""
+  ].join("\n"));
+
+  // No K-DLC lock yet: the live external folder is never read as a fallback.
+  await assert.rejects(loadKnowledgeProject(root), (error) => error.code === "RDLC_KB_UNMATERIALIZED");
+
+  await writeFile(join(root, "knowledge.lock"), JSON.stringify({
+    api_version: "kdlc.dev/v1alpha1",
+    knowledge_bases: { payments: { id: "acme.payments", manifest_hash: manifestHash, resolved_ref: "0dfc240659f73de2f28694bf65fb2e93c737ff89", tree_hash: "sha256:" + "1".repeat(64) } }
+  }));
+  // Lock present but no materialized cache: still fail closed.
+  await assert.rejects(loadKnowledgeProject(root), (error) => error.code === "RDLC_KB_UNMATERIALIZED");
+
+  // A cache entry whose manifest bytes do NOT match the pinned hash is ignored.
+  await mkdir(join(root, ".kdlc/mounts/deadbeef"), { recursive: true });
+  await writeFile(join(root, ".kdlc/mounts/deadbeef/knowledge-base.yaml"), manifestYaml + "# tampered\n");
+  await assert.rejects(loadKnowledgeProject(root), (error) => error.code === "RDLC_KB_UNMATERIALIZED");
+
+  // The verified materialization: manifest bytes match the lock's hash.
+  await mkdir(join(root, ".kdlc/mounts/cafe0123"), { recursive: true });
+  await writeFile(join(root, ".kdlc/mounts/cafe0123/knowledge-base.yaml"), manifestYaml);
+  await writeFile(join(root, ".kdlc/mounts/cafe0123/retrieval-catalog.json"), JSON.stringify({ version: CATALOG, concepts: [CONCEPT] }));
+  const project = await loadKnowledgeProject(root);
+  const mount = project.mounts.find(({ name }) => name === "payments");
+  assert.equal(mount.directory, join(root, ".kdlc/mounts/cafe0123"), "resolution binds to the verified cache, never the live folder");
+  assert.equal(mount.resolved_ref, "0dfc240659f73de2f28694bf65fb2e93c737ff89");
+
+  // kb:// references and the R-DLC lock work over the materialization,
+  // and the lock records K-DLC's resolved ref for the external mount.
+  const resolved = await resolveKbReference(project, `kb://payments/${CONCEPT.id}`);
+  assert.equal(resolved.byte_hash, CONCEPT.byte_hash);
+  const lock = await createKnowledgeLock(project, { lockedAt: "2026-08-16T12:00:00Z" });
+  assert.equal(lock.mounts[0].resolved_ref, "0dfc240659f73de2f28694bf65fb2e93c737ff89");
+  assert.equal(verifyKnowledgeLock(lock), true);
+  await rm(root, { recursive: true, force: true });
 });
 
 test("FEAT-023: the knowledge lock is deterministic, digest-bound, and tamper-evident (§17.1, §17.4)", async () => {

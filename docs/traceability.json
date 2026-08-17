@@ -616,6 +616,26 @@
           "tests/governance/knowledge.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-024",
+      "title": "External KB mounts resolve via K-DLC verified materialization, never raw outside folders",
+      "issue": 56,
+      "specification_sections": [
+        "10",
+        "11",
+        "17"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "core/lib/knowledge.mjs",
+          "distribution/release/conformance-statement.json"
+        ],
+        "tests": [
+          "tests/governance/knowledge.test.mjs"
+        ]
+      }
     }
   ]
 }
