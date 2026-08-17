@@ -595,6 +595,27 @@
           "tests/governance/engagement.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-023",
+      "title": "Knowledge-Grounded consumer contract: K-DLC mounts, kb:// resolution, knowledge lock, and change impact",
+      "issue": 54,
+      "specification_sections": [
+        "10",
+        "11",
+        "17"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "core/lib/knowledge.mjs",
+          "distribution/release/conformance-statement.json",
+          "package.json"
+        ],
+        "tests": [
+          "tests/governance/knowledge.test.mjs"
+        ]
+      }
     }
   ]
 }

@@ -8,10 +8,12 @@
   "modules": [
     "Core",
     "Governed-Basic",
-    "Planning"
+    "Planning",
+    "Knowledge-Grounded"
   ],
   "partial_modules": {
-    "Planning": "implemented: dependency records with rationale/origin/confidence, cycle detection, planning waves with an external dependency register and walking-skeleton candidate, critical blockers, coverage/collision review, estimation profiles, RAID+D, non-development task categories, and per-type content templates for every hierarchy level (\u00a720.2) with library-level connector field validation and external format-drift detection (catalog wiring into the Jira poll pipeline and the promotion default is engagement configuration, not automatic); outstanding depth: \u00a720.1 full company-setup resolution beyond issue-type/field discovery and \u00a721 release/milestone slicing"
+    "Planning": "implemented: dependency records with rationale/origin/confidence, cycle detection, planning waves with an external dependency register and walking-skeleton candidate, critical blockers, coverage/collision review, estimation profiles, RAID+D, non-development task categories, and per-type content templates for every hierarchy level (\u00a720.2) with library-level connector field validation and external format-drift detection (catalog wiring into the Jira poll pipeline and the promotion default is engagement configuration, not automatic); outstanding depth: \u00a720.1 full company-setup resolution beyond issue-type/field discovery and \u00a721 release/milestone slicing",
+    "Knowledge-Grounded": "implemented: K-DLC consumer-contract library (core/lib/knowledge.mjs) \u2014 knowledge-project.yaml mount loading with path confinement, kb:// reference resolution with fail-closed access checks, deterministic tamper-evident knowledge.lock (digest recorded in approval packages via kb_lock and baseline source_locks), catalog drift detection, and impact-review candidates (RDLC-KB-001 changed / RDLC-KB-002 removed) that never rewrite approved artifacts; outstanding depth: command-surface and engagement-runtime wiring (\u00a737 command set addition), rdlc.yaml knowledge-section resolution, and automatic impact sweeps on sync"
   },
   "connectors": [
     "Connected:Jira-Cloud-Company-Managed"
@@ -21,7 +23,7 @@
     "Harness:Claude-Code"
   ],
   "exceptions": [
-    "Verification module (test generation), Knowledge-Grounded, Governed-Regulated, Portfolio, webhooks, and Confluence API profiles are excluded from release 0.1 by \u00a745.1",
+    "Verification module (test generation), Governed-Regulated, Portfolio, webhooks, and Confluence API profiles are excluded from release 0.1 by \u00a745.1; Knowledge-Grounded graduated from that exclusion to a declared-partial claim (see partial_modules)",
     "connector capability subset declared in core/connectors/jira CAPABILITIES (attachments, native approvals, estimation-field discovery, history retention, ADF read-back normalization deferred) \u2014 \u00a746 step 4 is exercised to that declared depth",
     "the initial semantic review (\u00a724.2) is the clearly labeled deterministic-heuristic reviewer in core/lib/semantic-review.mjs; its quality claims are published separately per \u00a744.2 and are not deterministic conformance",
     "\u00a713 relationship-record field breadth follows the \u00a712.3 verbatim example pending the erratum adjudication (issue #2 follow-up item 16)",
