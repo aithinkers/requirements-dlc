@@ -248,7 +248,8 @@ test("FEAT-015: codex and kiro distributions generate from the same core with in
   assert.equal((await readdir("distribution/codex/.codex/agents")).length, 20, "md + toml per role");
   for (const host of ["kiro", "kiro-ide"]) {
     assert.equal((await readdir(`distribution/${host}/.kiro/skills`)).length, 28);
-    assert.equal((await readdir(`distribution/${host}/.kiro/agents`)).length, 20, "md + json per role");
+    // 10 roles (md + json) plus the rdlc front-door agent (md + json).
+    assert.equal((await readdir(`distribution/${host}/.kiro/agents`)).length, 22, "md + json per role + front door");
   }
   const codexAgent = await readFile("distribution/codex/.codex/agents/rdlc-facilitator.md", "utf8");
   assert.match(codexAgent, /untrusted data/);
@@ -260,7 +261,9 @@ test("FEAT-015: codex and kiro distributions generate from the same core with in
   const ideSkill = await readFile("distribution/kiro-ide/.kiro/skills/rdlc-sync/SKILL.md", "utf8");
   assert.match(ideSkill, /Kiro IDE/, "separate adapter, identical semantics (§36)");
   const manifest = JSON.parse(await readFile("distribution/kiro/.kiro/agents/rdlc-facilitator.json", "utf8"));
-  assert.equal(manifest.prompt, "rdlc-facilitator.md");
+  // Agent-v1 form (#58): file:// prompt, declared confinement, resources.
+  assert.equal(manifest.prompt, "file://rdlc-facilitator.md");
+  assert.deepEqual(manifest.toolsSettings.fs_write.allowedPaths, ["rdlc/**", "config/**"]);
 });
 
 test("FEAT-015: setup installs codex and kiro surfaces with the same semantics", async () => {

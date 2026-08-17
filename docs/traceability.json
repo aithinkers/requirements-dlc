@@ -636,6 +636,26 @@
           "tests/governance/knowledge.test.mjs"
         ]
       }
+    },
+    {
+      "id": "FEAT-025",
+      "title": "Kiro surfaces parity: agent-v1 manifests, dual-registered IDE hooks, front door",
+      "issue": 58,
+      "specification_sections": [
+        "7.8",
+        "34",
+        "36"
+      ],
+      "status": "implemented",
+      "evidence": {
+        "implementation": [
+          "scripts/generate-distribution.mjs"
+        ],
+        "tests": [
+          "tests/governance/kiro-surfaces.test.mjs",
+          "tests/governance/engagement.test.mjs"
+        ]
+      }
     }
   ]
 }

@@ -1,0 +1,1 @@
+{"version":"v1","hooks":[{"name":"rdlc-orient","trigger":"UserPromptSubmit","description":"Orients the assistant in an R-DLC engagement (at most once per few hours).","action":{"type":"command","command":"node .kiro/hooks/rdlc-orient.mjs"}}]}
