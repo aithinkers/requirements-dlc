@@ -237,6 +237,9 @@ for (const host of ["kiro", "kiro-ide"]) {
                 "([^\\s]*/)?git( -[^\\s]+( (\"[^\"]*\"|'[^']*'|[^\\s]+))?)* push( .*)?"
               ]
             },
+            // allowedPaths scopes AUTO-APPROVAL, not a hard deny: an edit to
+            // the human-owned root manifest (requirements-project.yaml, per
+            // setup-connector step 5.2) surfaces a user prompt — intended.
             fs_write: { allowedPaths: ["rdlc/**", "config/**"] }
           }
         }),
@@ -284,7 +287,7 @@ for (const host of ["kiro", "kiro-ide"]) {
 const RDLC_KIRO_ORIENT = `#!/usr/bin/env node
 // R-DLC session orientation for Kiro IDE. Deduped to once per 4 hours via a
 // marker file; best-effort, never fails the session.
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 try {
   const marker = join("rdlc", ".kiro-oriented");
@@ -302,7 +305,9 @@ try {
   } else {
     lines.push("No R-DLC engagement detected. The rdlc-start skill begins one.");
   }
-  try { mkdirSync("rdlc", { recursive: true }); writeFileSync(marker, String(Date.now())); } catch { /* dedup is best-effort */ }
+  // Only mark inside an existing rdlc/ dir: creating one here would make the
+  // next orientation falsely claim an engagement exists (review LOW).
+  if (existsSync("rdlc")) { try { writeFileSync(marker, String(Date.now())); } catch { /* dedup is best-effort */ } }
   process.stdout.write(lines.join("\\n") + "\\n");
 } catch { /* orientation is best-effort */ }
 `;
