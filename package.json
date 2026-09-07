@@ -36,7 +36,7 @@
     "canonicalize": "4.0.0",
     "csv-parse": "7.0.2",
     "fflate": "0.8.3",
-    "pdfjs-dist": "6.2.108",
+    "pdfjs-dist": "6.3.289",
     "saxes": "6.0.0",
     "yaml": "2.9.0"
   },
